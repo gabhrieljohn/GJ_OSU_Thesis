@@ -1,0 +1,108 @@
+---
+title: "Untitled"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+#Reading in P230 (for total rad mj/m2) after manual formatting in Excel (adjusting date format into yyyy-MM-dd HH:mm:ss and elimintating top few rows)
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(viridis)
+library(tidyr)
+library(lubridate)
+
+primet_230_a_5min_2014 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2014.csv", na.strings="NaN")
+primet_230_a_5min_2015 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2015.csv", na.strings="NaN")
+primet_230_a_5min_2016 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2016.csv", na.strings="NaN")
+primet_230_a_5min_2017 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2017.csv", na.strings="NaN")
+primet_230_a_5min_2018 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2018.csv", na.strings="NaN")
+primet_230_a_5min_2019 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2019.csv", na.strings="NaN")
+primet_230_a_5min_2020 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2020.csv", na.strings="NaN")
+primet_230_a_5min_2021 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2021.csv", na.strings="NaN")
+primet_230_a_5min_2022 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2022.csv", na.strings="NaN")
+primet_230_a_5min_2023 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2023.csv", na.strings="NaN")
+primet_230_a_5min_2024 <- read.csv("C:/Users/gabhr/Downloads/primet_230_a_5min_2024.csv", na.strings="NaN")
+
+#Combining into one dataframe - issue with combining logical and character vectors
+primet_230_a_5min_2014Ch <- primet_230_a_5min_2014 |> mutate(across(where(is.logical), as.character))|>select(!RAD_MAX_100_0_01)
+primet_230_a_5min_2015Ch <- primet_230_a_5min_2015 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2016Ch <- primet_230_a_5min_2016 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2017Ch <- primet_230_a_5min_2017 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2018Ch <- primet_230_a_5min_2018 |> mutate(across(where(is.logical), as.character)) |> mutate(SOLAR_MAX_100_0_01 = as.character(SOLAR_MAX_100_0_01))
+primet_230_a_5min_2019Ch <- primet_230_a_5min_2019 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2020Ch <- primet_230_a_5min_2020 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2021Ch <- primet_230_a_5min_2021 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2022Ch <- primet_230_a_5min_2022 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2023Ch <- primet_230_a_5min_2023 |> mutate(across(where(is.logical), as.character))|> mutate(SWC_MEAN_0_20_02 = as.numeric(SWC_MEAN_0_20_02)) |> mutate(SWE_CHECK=as.character(SWE_CHECK))
+primet_230_a_5min_2024Ch <- primet_230_a_5min_2024 |> mutate(across(where(is.logical), as.character))|> mutate(SWC_MEAN_0_20_02 = as.numeric(SWC_MEAN_0_20_02)) |> mutate(SWE_CHECK=as.character(SWE_CHECK))
+
+
+# Now use bind_rows
+P230long <- bind_rows(
+  primet_230_a_5min_2014Ch,
+  primet_230_a_5min_2015Ch,
+  primet_230_a_5min_2016Ch,
+  primet_230_a_5min_2017Ch,
+  primet_230_a_5min_2018Ch,
+  primet_230_a_5min_2019Ch,
+  primet_230_a_5min_2020Ch,
+  primet_230_a_5min_2021Ch,
+  primet_230_a_5min_2022Ch,
+  primet_230_a_5min_2023Ch,
+  primet_230_a_5min_2024Ch)
+
+#Filling blank cells with NA
+P230long_filled <- P230long |>
+  mutate(across(everything(), ~ ifelse(. == '', NA, .)))
+```
+#Just  getting RAD
+```{r}
+P230long_filled_select<-P230long_filled|>select(c(Date,SOLAR_TOT_100_0_02,Flag_SOLAR_TOT_100_0_02,RAD_TOT_100_0_01.1,Flag_RAD_TOT_100_0_01.1))
+
+P230long_filled_select$SOLAR_TOT_100_0_02[P230long_filled_select$Flag_SOLAR_TOT_100_0_02=="Q"] <- NA
+P230long_filled_select$RAD_TOT_100_0_01.1[P230long_filled_select$Flag_RAD_TOT_100_0_01.1=="Q"] <- NA
+
+
+P230longer_filled_select<-P230long_filled_select|>pivot_longer(
+    cols = c(SOLAR_TOT_100_0_02,RAD_TOT_100_0_01.1),
+    names_to = "Rad",  
+    values_to = "Rad_mj_per_m2")
+
+P230longer_filled_select$Date<-as.POSIXct(P230longer_filled_select$Date,format="%Y-%m-%d %H:%M:%S")
+```
+
+#Daily sum
+```{r}
+P230longer_filled_select$day<-format(P230longer_filled_select$Date,"%Y-%m-%d")
+DailySum_P230longer_filled_select<- P230longer_filled_select |> group_by(day) |> summarise(Rad_mj_per_m2 = sum(Rad_mj_per_m2, na.rm = TRUE))
+```
+#monthly av
+```{r}
+DailySum_P230longer_filled_select$day<-as.POSIXct(DailySum_P230longer_filled_select$day,format="%Y-%m-%d")
+DailySum_P230longer_filled_select$month<-format(DailySum_P230longer_filled_select$day,"%m")
+mAvg_P230longer_filled_select<-DailySum_P230longer_filled_select |> group_by(month) |> summarise(Rad_mj_per_m2 = mean(Rad_mj_per_m2, na.rm = TRUE))
+write.csv(file = "mAvg_P230longer_filled_select.csv",mAvg_P230longer_filled_select)
+```
+
+```{r}
+prismCSV <- read.csv("C:/Users/gabhr/Downloads/prismCSV.csv")
+prismCSV$Date <- as.Date(prismCSV$Date, format = "%Y-%m)
+prismCSV$month<-format(prismCSV$Date,"%m")
+
+ppt<-prismCSV|>select(c(Date,ppt..mm.))
+tmin<-prismCSV|>select(c(Date,tmin..degrees.C.))
+tmax<-prismCSV|>select(c(Date,tmax..degrees.C.))
+
+DailySum_P230longer_filled_select$day<-as.POSIXct(DailySum_P230longer_filled_select$day,format="%Y-%m-%d")
+DailySum_P230longer_filled_select$month<-format(DailySum_P230longer_filled_select$day,"%m")
+mAvg_P230longer_filled_select<-DailySum_P230longer_filled_select |> group_by(month) |> summarise(Rad_mj_per_m2 = mean(Rad_mj_per_m2, na.rm = TRUE))
+write.csv(file = "mAvg_P230longer_filled_select.csv",mAvg_P230longer_filled_select)
+```
+```{r}
+prismCSV<-parse_date_time(prismCSV$Date,orders=c("my","my"))
+```
+

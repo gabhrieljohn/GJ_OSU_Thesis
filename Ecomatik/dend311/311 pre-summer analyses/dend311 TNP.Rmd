@@ -1,0 +1,223 @@
+---
+title: "Dend 311 TNP
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: pdf
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Installing for the first time
+
+`{#{packages <- (c("devtools","zoo","chron","dplyr","viridis", "RCurl", "DT","lubridate"))} #install.packages(setdiff(packages, rownames(installed.packages()))) #devtools::install_github("treenet/treenetproc")`
+
+```{r}
+library(treenetproc, `force = TRUE`)
+library(zoo)
+library(chron)
+library(viridis)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+```
+
+```{r}
+getwd()
+```
+
+# Example with DSCMET_422 at HJA
+
+## step 0: identify helper functions
+
+```{r}
+left <- function(string, char){substr(string, 1,char)} 
+right <- function (string, char){substr(string,nchar(string)-(char-1),nchar(string))}
+```
+
+## step 1: read in dendrometer data and plot raw data
+
+```{r}
+dend311ts <- read.csv("~/research/dend311ts.csv", na.strings="NaN", stringsAsFactors=TRUE)
+head(dend311ts)
+```
+
+## Step 2: fix timestamps (ts) and connect with dendrometer ID number
+
+```{r}
+dend311<-dend311ts
+datetime<-dend311$datetime
+ID = '311'
+ts = as.POSIXct(dend311['datetime'][,],format="%Y-%m-%d %H:%M:%S",tz="GMT") 
+dend311_L0<-cbind(dend311["value"]+0,ts,series=ID)
+```
+
+## Step 3: set parameters to plot raw data
+
+```{r}
+#First grab years string
+years <-left(dend311_L0[,"ts"],4)
+#To plot, set number of plots with par()
+par(mfrow=c(1,1))
+#Then set margins 
+par(mar = c(5, 5, 5, 5))
+```
+
+## Step 4: plotting raw data for loop plots data iteratively.
+
+```{r}
+for(y in 1:length(unique(years))){
+#Now we can select years
+sel<-dend311_L0[which(years==unique(years)[y]),]
+#But we need to handle first year first
+if(y==1){
+   plot(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+  as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                  format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                  units = "days"),
+         sel$value,
+         ylab=expression("L0 ("*mu*"m)"),
+         xlab="Day of year",type="l",
+         col=viridis(length(unique(years)))[y],
+         xlim=c(0,365),
+         ylim=c(min(dend311_L0$value,na.rm=T),
+                max(dend311_L0$value,na.rm=T)),
+         main=unique(dend311_L0$series))
+    
+    legend("bottomleft",
+           as.character(unique(years)[-4]),
+           col=viridis(length(unique(years))),
+           bty="n",lty=1)
+# Now we can add other years
+  }else{
+    lines(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                              format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   units = "days"),
+          sel$value,
+          col=viridis(length(unique(years)))[y])}
+}
+```
+
+## Step 5: cleaning the dendrometery data
+
+```{r}
+#Level 1 processing (time align) method 1
+?treenetproc::proc_L1 
+dend311_L1<- proc_L1(data_L0 = dend311_L0, reso = 60 ) 
+                  #input = "wide", date_format ="%Y-%m-%d %H:%M:%S") 
+head(dend311_L1)
+#Level 1 processing (time align) method 2
+
+dend311_L1<- proc_L1(data_L0 = dend311_L0, reso = 60,
+                  date_format ="%Y-%m-%d %H:%M:%S", tz = "GMT")
+head(dend311_L1)
+
+#level 1 processing of temperature data
+ mean4000C <- read.csv("C:/Users/gabhr/Downloads/mean4000tempC.csv", na.strings="NaN", stringsAsFactors=TRUE)
+head(mean4000C)
+
+temp_data_311_L0 <- cbind(mean4000C,series=ID)
+colnames(temp_data_311_L0) <-c('ts','value','series')
+
+#Now we can time-align temperature data with proc_L1
+temp_data_311_L1 <- proc_L1(data_L0 = temp_data_311_L0, reso = 60, 
+                            date_format ="%Y-%m-%d %H:%M:%S", tz = "GMT") 
+head(temp_data_311_L1)
+```
+
+Now we can move on to proc_dendro_L2, which integrates dendrometer readings with temperature, detects errors, corrects them and plots gro and twd by date.more info here: ?treenetproc::proc_dendro_L2
+
+first plot full dataset for dendrometer. Plot will be exported to working directory as pdf
+
+```{r}
+#first plot full dataset for dendrometer. NOTE: Plot will be exported to working directory as pdf
+dend311_L2 <- proc_dendro_L2(dendro_L1 = dend311_L1, temp_L1 = temp_data_311_L1, tol_out = 2, tol_jump = 3, plot = TRUE, frost_thr = 1, plot_period = "full", plot_export = TRUE, interpol = 3.5*60, frag_len = NULL, plot_name = "dend311_full", tz="GMT") 
+graphics.off()
+```
+
+Looking at this we can see that the tolerance for outliers and tolerance for jumps were set lower (more stringent) than default value. We can plot monthly instead and look at exported pdf for greater detail.
+
+```{r}
+dend311_L2_monthly <- proc_dendro_L2(dendro_L1 = dend311_L1, temp_L1 = temp_data_311_L1, tol_out = 2, tol_jump = 3, frost_thr = 1, plot = TRUE, interpol = 3.5*60, plot_period = "monthly", plot_export = TRUE, plot_name = "dend311_monthly", tz="GMT") 
+graphics.off()
+```
+
+We can manually correct some areas where automated data cleaning was not up to snuff.
+
+```{r}
+# First off, delete data from before installation on June 22st 2022 and the first week after installation 
+#info on function here: ?corr_dendro_L2
+
+
+#check errors in pdf and with this subset 
+#dend309_L2[which((dend309_L2$flags)!="NA"),]
+```
+
+## Step 6: plot!
+
+```{r}
+ggplot((subset(dend311_L2, frost == "FALSE")), aes(x=ts))+ geom_line(aes(y=value), color = "grey70")+ geom_line(aes(y=gro_yr), color = "seagreen")+ geom_line(aes(y=twd), color = "red")
+```
+
+What if we want to visualize cumulative growth instead of growth for each year?
+
+```{r}
+#create column for separate years 
+dend311_L2$yr <- substr(dend311_L2$ts,1,4)
+#Turn these columns into separate dataframes for each year
+dend311_2023_growth <- dend311_L2[which(dend311_L2$yr == "2023"),] 
+dend311_2022_growth <- dend311_L2[which(dend311_L2$yr == "2022"),]
+
+#"for 2023, add that years growth to 2022's maximum growth of 2214 µm #for 2022, make a copy of gro_yr"
+
+dend311_2023_growth$gro_tot <- dend311_2023_growth$gro_yr+1100
+dend311_2022_growth$gro_tot <- dend311_2022_growth$gro_yr
+
+#recombine both years data frames into one. 
+dend311_L3<-rbind(dend311_2022_growth, dend311_2023_growth)
+
+#Now plot!
+ggplot((subset(dend311_L3, frost =="FALSE")), aes(x=ts))+ geom_line(aes(y=value), color = "grey70")+ geom_line(aes(y=gro_tot), color = "seagreen")+ geom_line(aes(y=twd), color = "red")
+```
+
+What if we just want ro look at the growing season?
+
+```{r}
+ggplot((subset(dend311_L3, ts < as.POSIXct("2023-10-31 00:00") & ts > as.POSIXct("2023-04-01 00:00"))), aes(x=ts))+ geom_line(aes(y=value), color = "grey70")+ geom_line(aes(y=gro_tot), color = "seagreen")+ geom_line(aes(y=twd), color = "red")+xlab("Day of Year (2023)")+ggtitle("Cumulative Growing Season Growth ID 311")
+
+#The function phase_stats() will compute rates of expansion(growth) and shrinkage (twd) and aggregate these on a daily basis. 
+#More info: ?phase_stats
+
+dend311_phase <- phase_stats(dend311_L2, plot_phase = TRUE, plot_export = TRUE, agg_daily = TRUE, tz = 'GMT' )
+
+#These growth and shrink rates can be compared with temperature, VPD and soil moisture.
+#We will likely restrict this analysis to the growing season.
+#some preliminary analysis/exploration using this
+
+ggplot(subset(dend311_phase, doy > 100 & doy < 250), aes(x=doy))+ geom_point(aes(y = shrink_amp, colour = "Shrinkage" ))+ geom_point(aes(y = exp_amp, colour ="Expansion"))+ ylab("Amplitude")
+
+ggplot(subset(dend311_phase, doy > 100 & doy < 250), aes(x=doy))+ geom_point(aes(y = shrink_slope, colour = "Shrinkage" ))+ geom_point(aes(y = exp_slope, colour ="Expansion"))+ ylab("Slope")
+
+ggplot(subset(dend311_phase, doy > 100 & doy < 250), aes(x=shrink_amp, y = exp_amp))+ geom_point()+ ylab(" Expansion amplitude")+ xlab(" Shrinkage amplitude")
+
+ggplot(subset(dend311_phase, doy > 100 & doy < 250), aes(x=shrink_slope, y = exp_slope))+ geom_point()+ ylab(" Expansion slope")+ xlab(" Shrinkage slope")
+```
+
+## Step 6: Export
+
+Now that data is cleaned, we can export for analysis with weather data.
+
+```{r}
+#for plotting 
+write.csv(file = "dend311_cleaned.csv", dend311_L3)
+
+#daily growth stats 
+write.csv(file = "dendro_311_phase_stats.csv", dend311_phase)
+```
+
+# 

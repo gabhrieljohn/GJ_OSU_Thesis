@@ -1,0 +1,241 @@
+---
+title: "Dend 654 full"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: pdf
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Installing for the first time
+
+`{#{packages <- (c("devtools","zoo","chron","dplyr","viridis", "RCurl", "DT","lubridate"))} #install.packages(setdiff(packages, rownames(installed.packages()))) #devtools::install_github("treenet/treenetproc")`
+
+```{r}
+library(treenetproc, `force = TRUE`)
+library(zoo)
+library(chron)
+library(viridis)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+```
+
+## step 0: identify helper functions
+
+```{r}
+left <- function(string, char){substr(string, 1,char)} 
+right <- function (string, char){substr(string,nchar(string)-(char-1),nchar(string))}
+```
+
+## step 1: read in dendrometer data and plot raw data
+R will not open your CSV file if its title starts with a number and will instead give an error message. You can change the title so it starts with a letter character instead. 
+Make sure that the NA strings reader matches the NA codes in the original CSV file, in this case "NaN". 
+
+```{r}
+dend654tsedit <- read.csv("~/research/dend654/654tsedit.csv", na.strings="NaN", stringsAsFactors=TRUE)
+head(dend654tsedit)
+```
+
+## Step 2: fix timestamps (ts) and connect with dendrometer ID number
+
+```{r}
+dend654<-dend654tsedit
+datetime<-dend654$datetime
+ID = '654'
+ts = as.POSIXct(dend654['datetime'][,],format="%Y-%m-%d %H:%M:%S",tz="GMT") 
+dend654_L0<-cbind(dend654["value"]+0,ts,series=ID)
+```
+
+## Step 3: set parameters to plot raw data
+
+```{r}
+#First grab years string
+years <-left(dend654_L0[,"ts"],4)
+#To plot, set number of plots with par()
+par(mfrow=c(1,1))
+#Then set margins 
+par(mar = c(5, 5, 5, 5))
+```
+
+## Step 4: plotting raw data for loop plots data iteratively.
+
+```{r}
+for(y in 1:length(unique(years))){
+#Now we can select years
+sel<-dend654_L0[which(years==unique(years)[y]),]
+#But we need to handle first year first
+if(y==1){
+   plot(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+  as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                  format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                  units = "days"),
+         sel$value,
+         ylab=expression("L0 ("*mu*"m)"),
+         xlab="Day of year",type="l",
+         col=rainbow(length(unique(years)))[y],pch=16,
+         xlim=c(0,365),
+         ylim=c(min(dend654_L0$value,na.rm=T),
+                max(dend654_L0$value,na.rm=T)),
+         main=unique(dend654_L0$series))
+    
+    legend("topleft",
+           as.character(unique(years)[-4]),
+           col=rainbow(length(unique(years))),
+           bty="n",pch=16)
+# Now we can add other years
+  }else{
+    lines(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                              format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   units = "days"),
+          sel$value,
+          col=rainbow(length(unique(years)))[y],pch=16)}
+}
+```
+
+## Step 5: cleaning the dendrometery data
+
+```{r}
+#Level 1 processing (time align) method 1
+?treenetproc::proc_L1 
+dend654_L1<- proc_L1(data_L0 = dend654_L0, reso = 60 ) 
+                  #input = "wide", date_format ="%Y-%m-%d %H:%M:%S") 
+head(dend654_L1)
+#Level 1 processing (time align) method 2
+
+dend654_L1<- proc_L1(data_L0 = dend654_L0, reso = 60,
+                  date_format ="%Y-%m-%d %H:%M:%S", tz = "GMT")
+head(dend654_L1)
+
+#level 1 processing of temperature data
+DSCMET421_mean56m <- read.csv("~/research/DSCMET421 climate data/DSCMET421_mean56m.csv", na.strings="NaN", stringsAsFactors=TRUE)
+head(DSCMET421_mean56m)
+
+temp_data_654_L0 <- cbind(DSCMET421_mean56m,series=ID)
+colnames(temp_data_654_L0) <-c('ts','value','series')
+
+#Now we can time-align temperature data with proc_L1
+temp_data_654_L1 <- proc_L1(data_L0 = temp_data_654_L0, reso = 60, 
+                            date_format ="%Y-%m-%d %H:%M:%S", tz = "GMT") 
+head(temp_data_654_L1)
+```
+
+Now we can move on to proc_dendro_L2, which integrates dendrometer readings with temperature, detects errors, corrects them and plots gro and twd by date.more info here: ?treenetproc::proc_dendro_L2
+
+first plot full dataset for dendrometer. Plot will be exported to working directory as pdf
+
+```{r}
+#first plot full dataset for dendrometer. NOTE: Plot will be exported to working directory as pdf
+dend654_L2 <- proc_dendro_L2(dendro_L1 = dend654_L1, temp_L1 = temp_data_654_L1, tol_out = 2, tol_jump = 3, plot = TRUE, frost_thr = 1, plot_period = "full", plot_export = TRUE, interpol = 3.5*60, frag_len = NULL, plot_name = "dend654summer_full", tz="GMT") 
+graphics.off()
+```
+
+Looking at this we can see that the tolerance for outliers and tolerance for jumps were set lower (more stringent) than default value. We can plot monthly instead and look at exported pdf for greater detail.
+
+```{r}
+dend654_L2_monthly <- proc_dendro_L2(dendro_L1 = dend654_L1, temp_L1 = temp_data_654_L1, tol_out = 2, tol_jump = 3, frost_thr = 1, plot = TRUE, interpol = 3.5*60, plot_period = "monthly", plot_export = TRUE, plot_name = "dend654summer_monthly", tz="GMT") 
+graphics.off()
+```
+
+We can manually correct some areas where automated data cleaning was not up to snuff.
+
+```{r}
+#info on function here: ?corr_dendro_L2
+
+#check errors in pdf and with this subset 
+dend654_L2[which((dend654_L2$flags)!="NA"),]
+
+#highlight corrections made on the dendrometer data:
+(dend654_L2[which(is.na(dend654_L2$flags)==F),])
+```
+
+## Step 6: plot!
+
+```{r}
+ggplot((subset(dend654_L2, frost == "FALSE")), aes(x=ts))+ geom_line(aes(y=value), color = "grey70")+ geom_line(aes(y=gro_yr), color = "seagreen")+ geom_line(aes(y=twd), color = "red")
+```
+
+What if we want to visualize cumulative growth instead of growth for each year?
+
+```{r}
+#create column for separate years 
+dend654_L2$yr <- substr(dend654_L2$ts,1,4)
+#Turn these columns into separate dataframes for each year
+dend654_2023_growth <- dend654_L2[which(dend654_L2$yr == "2023"),] 
+dend654_2022_growth <- dend654_L2[which(dend654_L2$yr == "2022"),]
+dend654_2021_growth <- dend654_L2[which(dend654_L2$yr == "2021"),]
+dend654_2020_growth <- dend654_L2[which(dend654_L2$yr == "2020"),]
+dend654_2019_growth <- dend654_L2[which(dend654_L2$yr == "2019"),]
+dend654_2018_growth <- dend654_L2[which(dend654_L2$yr == "2018"),]
+
+#"for 2023, add that years growth to 2022's maximum growth for 2022, make a copy of gro_yr". I do this by going to Dec. 31 of the previous year in the L2 dataframe and finding the "max" value in the corresponding column. 
+dend654_2023_growth$gro_tot <- dend654_2023_growth$gro_yr+90040
+dend654_2022_growth$gro_tot <- dend654_2022_growth$gro_yr+66629
+dend654_2021_growth$gro_tot <- dend654_2021_growth$gro_yr+42349.5
+dend654_2020_growth$gro_tot <- dend654_2020_growth$gro_yr+21734.5
+dend654_2019_growth$gro_tot <- dend654_2019_growth$gro_yr+1901
+dend654_2018_growth$gro_tot <- dend654_2018_growth$gro_yr
+
+#recombine both years data frames into one. 
+dend654_L3<-rbind(dend654_2018_growth,dend654_2019_growth,dend654_2020_growth,dend654_2021_growth,dend654_2022_growth, dend654_2023_growth)
+
+#Now plot!
+ggplot((subset(dend654_L3, frost =="FALSE")), aes(x=ts))+ geom_line(aes(y=value), color = "grey70")+ geom_line(aes(y=gro_tot), color = "seagreen")+ geom_line(aes(y=twd), color = "red")
+```
+
+What if we just want ro look at the growing season?
+
+```{r}
+# we can calculate growing season start and end:
+?treenetproc::grow_seas
+
+# aggregate to growing season by year
+grow_seas_L2 <- grow_seas(dendro_L2 = dend654_L2,agg_yearly=TRUE,tol_seas = 0.1)
+knitr::kable(grow_seas_L2,
+             caption = "Estimated Growing Season")
+```
+
+
+```{r}
+ggplot((subset(dend654_L3, ts < as.POSIXct("2024-03-01 00:00") & ts > as.POSIXct("2023-03-01 00:00"))), aes(x=ts))+ geom_line(aes(y=value), color = "grey70")+ geom_line(aes(y=gro_tot), color = "seagreen")+ geom_line(aes(y=twd), color = "red")+xlab("Day of Year (2023)")+ggtitle("Cumulative Growing Season Growth ID 654")
+```
+
+
+```{r}
+#The function phase_stats() will compute rates of expansion(growth) and shrinkage (twd) and aggregate these on a daily basis. 
+#More info: ?phase_stats
+
+dend654_phase <- phase_stats(dend654_L2, plot_phase = TRUE, plot_export = TRUE, agg_daily = TRUE, tz = 'GMT' )
+
+#These growth and shrink rates can be compared with temperature, VPD and soil moisture.
+#We will likely restrict this analysis to the growing season.
+#some preliminary analysis/exploration using this
+
+ggplot(subset(dend654_phase, doy > 100 & doy < 250), aes(x=doy))+ geom_point(aes(y = shrink_amp, colour = "Shrinkage" ))+ geom_point(aes(y = exp_amp, colour ="Expansion"))+ ylab("Amplitude")
+
+ggplot(subset(dend654_phase, doy > 100 & doy < 250), aes(x=doy))+ geom_point(aes(y = shrink_slope, colour = "Shrinkage" ))+ geom_point(aes(y = exp_slope, colour ="Expansion"))+ ylab("Slope")
+
+ggplot(subset(dend654_phase, doy > 100 & doy < 250), aes(x=shrink_amp, y = exp_amp))+ geom_point()+ ylab(" Expansion amplitude")+ xlab(" Shrinkage amplitude")
+
+ggplot(subset(dend654_phase, doy > 100 & doy < 250), aes(x=shrink_slope, y = exp_slope))+ geom_point()+ ylab(" Expansion slope")+ xlab(" Shrinkage slope")
+```
+
+## Step 6: Export
+
+Now that data is cleaned, we can export for analysis with weather data.
+
+```{r}
+#for plotting 
+write.csv(file = "dend654full_cleaned.csv", dend654_L3)
+
+#daily growth stats 
+write.csv(file = "dendro_654full_phase_stats.csv", dend654_phase)
+```
+
+# 

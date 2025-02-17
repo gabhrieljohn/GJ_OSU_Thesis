@@ -1,0 +1,113 @@
+---
+title: "Untitled"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: pdf
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+```
+
+```{r}
+library(readxl)
+bullGJ_model_weed_physiology8_valid <- read_excel("GJ_model_weed_physiology8_valid_outputs.xlsm", 
+     sheet = "bull", col_types = c("text", 
+         "text", "text", "text", "numeric", 
+         "date", "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric"))
+
+
+bullGJ_model_weed_physiology8_valid$X<-bullGJ_model_weed_physiology8_valid$DATE
+bullGJ_model_weed_physiology8_valid$Y<-bullGJ_model_weed_physiology8_valid$ASW_fractional
+bullGJ_model_weed_physiology8_valid$Initial_Cover <- factor(bullGJ_model_weed_physiology8_valid$initial_cover)
+bullGJ_model_weed_physiology8_valid$Weed_Control <- factor(bullGJ_model_weed_physiology8_valid$weed_control)
+bullGJ_model_weed_physiology8_valid$Site <- factor(bullGJ_model_weed_physiology8_valid$site)
+
+ggplot(bullGJ_model_weed_physiology8_valid, aes(x = X, y = Y, color = Weed_Control, shape = Initial_Cover, linetype = Site,alpha=Weed_Control)) +
+  geom_point(size = 6,alpha=0.25) +  # Use points
+  geom_line() +  # Connect points with lines
+  theme_minimal() +  # Minimal theme
+  labs(title = "Fractional ASW for bull thistle under different scenarios",
+       x = "Date", 
+       y = "Fractional ASW")+
+    facet_grid(Initial_Cover ~ Site)
+
+```
+
+```{r}
+bbery1GJ_model_weed_physiology8_valid <- read_excel("GJ_model_weed_physiology8_valid_outputs.xlsm", 
+     sheet = "bberry", col_types = c("text", 
+         "text", "text", "text", "numeric", 
+         "date", "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric"))
+
+bbery1GJ_model_weed_physiology8_valid$X<-bbery1GJ_model_weed_physiology8_valid$DATE
+bbery1GJ_model_weed_physiology8_valid$Y<-bbery1GJ_model_weed_physiology8_valid$ASW_fractional
+bbery1GJ_model_weed_physiology8_valid$Initial_Cover <- factor(bbery1GJ_model_weed_physiology8_valid$initial_cover)
+bbery1GJ_model_weed_physiology8_valid$Weed_Control <- factor(bbery1GJ_model_weed_physiology8_valid$weed_control)
+bbery1GJ_model_weed_physiology8_valid$Site <- factor(bbery1GJ_model_weed_physiology8_valid$site)
+
+ggplot(bbery1GJ_model_weed_physiology8_valid, aes(x = X, y = Y, color = Weed_Control, shape = Initial_Cover, linetype = Site,alpha=Weed_Control)) +
+  geom_point(size = 6,alpha=0.25) +  # Use points
+  geom_line() +  # Connect points with lines
+  theme_minimal() +  # Minimal theme
+  labs(title = "Fractional ASW for trailing blackberry under different scenarios",
+       x = "Date", 
+       y = "Fractional ASW")+
+    facet_grid(Initial_Cover ~ Site)
+```
+
+```{r}
+senecioGJ_model_weed_physiology8_valid <- read_excel("GJ_model_weed_physiology8_valid_outputs.xlsm", 
+     sheet = "senecio", col_types = c("text", 
+         "text", "text", "text", "numeric", 
+         "date", "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric", 
+         "numeric", "numeric"))
+
+senecioGJ_model_weed_physiology8_valid$X<-senecioGJ_model_weed_physiology8_valid$DATE
+senecioGJ_model_weed_physiology8_valid$Y<-senecioGJ_model_weed_physiology8_valid$ASW_fractional
+senecioGJ_model_weed_physiology8_valid$Initial_Cover <- factor(senecioGJ_model_weed_physiology8_valid$initial_cover)
+senecioGJ_model_weed_physiology8_valid$Weed_Control <- factor(senecioGJ_model_weed_physiology8_valid$weed_control)
+senecioGJ_model_weed_physiology8_valid$Site <- factor(senecioGJ_model_weed_physiology8_valid$site)
+
+ggplot(senecioGJ_model_weed_physiology8_valid, aes(x = X, y = Y, color = Weed_Control, shape = Initial_Cover, linetype = Site,alpha=Weed_Control)) +
+  geom_point(size = 6,alpha=0.25) +  # Use points
+  geom_line() +  # Connect points with lines
+  theme_minimal() +  # Minimal theme
+  labs(title = "Fractional ASW for senecio under different scenarios",
+       x = "Date", 
+       y = "Fractional ASW")+
+    facet_grid(Initial_Cover ~ Site)
+```
+
+```{r}
+canadaGJ_model_weed_physiology8_valid <- read_excel("canadaGJ_model_weed_physiology8_valid.xlsm", 
+     sheet = "Sheet1", col_types = c("text", 
+         "text", "text", "text", 
+         "text", "date", "numeric", "numeric", 
+         "numeric", "numeric", "numeric",          "numeric", "numeric", "numeric", 
+         "numeric", "numeric", "numeric"))
+
+canadaGJ_model_weed_physiology8_valid$X<-canadaGJ_model_weed_physiology8_valid$DATE
+canadaGJ_model_weed_physiology8_valid$Y<-canadaGJ_model_weed_physiology8_valid$ASW_fractional
+canadaGJ_model_weed_physiology8_valid$Initial_Cover <- factor(canadaGJ_model_weed_physiology8_valid$initial_cover)
+canadaGJ_model_weed_physiology8_valid$Weed_Control <- factor(canadaGJ_model_weed_physiology8_valid$weed_control)
+canadaGJ_model_weed_physiology8_valid$Site <- factor(canadaGJ_model_weed_physiology8_valid$site)
+
+ggplot(canadaGJ_model_weed_physiology8_valid, aes(x = X, y = Y, color = Weed_Control, shape = Initial_Cover, linetype = Site,alpha=Weed_Control)) +
+  geom_point(size = 6,alpha=0.25) +  # Use points
+  geom_line() +  # Connect points with lines
+  theme_minimal() +  # Minimal theme
+  labs(title = "Fractional ASW for Canada thistle under different scenarios",
+       x = "Date", 
+       y = "Fractional ASW")+
+    facet_grid(Initial_Cover ~ Site)
+```
+

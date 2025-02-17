@@ -1,0 +1,44 @@
+---
+title: "Zoom in on heat dome growth cleaned 311"
+format: html
+editor: visual
+---
+
+```{r}
+library(dplyr)
+library(lubridate)
+```
+
+You can add options to executable code like this
+
+```{r}
+# Load your dataset (replace 'my_data.csv' with your actual dataset path)
+my_data <- read_csv("~/research/dend311/311 summer work/dend311full_cleaned.csv")
+
+my_data$date <- as.Date(my_data$ts)
+
+# Filter data for June 2023 (adjust the month and year as needed)
+target_month <- c(6,7)  # June
+target_year <- 2021
+
+filtered_data <- my_data |>
+  filter(month(date) == target_month & year(date) == target_year)
+
+# Example: Create a plot (e.g., line plot of a numeric variable over time)
+library(ggplot2)  # for plotting
+
+FD<-ggplot(filtered_data, aes(x = date, y = value)) +
+  geom_line() +
+  labs(title = "Value Variable Over Time in June 2021",
+       x = "Date", y = "Value") +
+  theme_minimal()
+
+# Add horizontal dashed line 
+FD + geom_hline(yintercept = 73057, linetype = "dashed", color = "red")
+
+# Add vertical dashed line at a specific date
+specific_date <- as.Date("2021-06-25")
+FD +  c(geom_hline(yintercept = 73057, linetype = "dashed", color = "red"),geom_vline(xintercept = as.numeric(specific_date), linetype = "dashed", color = "red"))+
+  
+  annotate("text",x=specific_date+10,y=72500,label="Onset of Heat Dome",color="red")
+```

@@ -1,0 +1,27 @@
+---
+title: "dendro to BAI instructions"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+```{r}
+#Load DPLYR package
+library(dplyr)
+
+#write function to convert dendrometer output (circumference) to basal area in mm^2
+dend_to_area_mm2 <- function(value) {
+  result <- ((value/1000)/(2*pi))^2*pi
+  return(result)
+}
+
+#Use this function to make columns for area, basal area increment, and cumulative basal area increment
+# Example using first few values for DSCMET 309 in 2023
+exampledf<-data.frame(value=c(14057,14059,14059,14058,14057,14056,14055,14055,14056,14058,14060,
+14061))
+
+exampledf<-exampledf|>mutate(area_mm2=dend_to_area_mm2(value))|>mutate(bai_mm2 = area_mm2 - lag(area_mm2))|>mutate(bai_cumu=cumsum(if_else(is.na(bai_mm2), 0, bai_mm2)))
+exampledf
+```
+
