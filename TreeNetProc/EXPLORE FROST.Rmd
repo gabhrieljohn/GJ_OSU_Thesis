@@ -1,0 +1,194 @@
+---
+title: "Untitled"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(treenetproc, `force = TRUE`)
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(scales)
+
+left <- function(string, char){substr(string, 1,char)} 
+right <- function (string, char){substr(string,nchar(string)-(char-1),nchar(string))}
+```
+
+
+```{r}
+CEN5180ts<- read.csv("~/research/TOMST/CEN_5180_ts_DMY.csv",stringsAsFactors = TRUE)
+CEN5180ts$value<-as.numeric(CEN5180ts$value)
+CEN5180ts$ts<-parse_date_time(CEN5180ts$ts,orders=c("dmy","dmy HMS"))
+CEN5180ts$yr<-format(CEN5180ts$ts, "%Y")
+CEN5180ts$yr<-as.factor(CEN5180ts$yr)
+
+
+CEN5180temp<- read.csv("~/research/TOMST/CEN_5180_temp.csv",stringsAsFactors = TRUE)
+CEN5180temp$value<-as.numeric(CEN5180temp$value)
+CEN5180temp$ts<-parse_date_time(CEN5180temp$ts,orders=c("dmy","dmy HMS"))
+CEN5180temp$yr<-format(CEN5180temp$ts, "%Y")
+CEN5180temp$yr<-as.factor(CEN5180temp$yr)
+write.csv(file="CEN5180temp.csv",CEN5180temp)
+
+CEN5180ts$series<-"CEN5180"
+CEN5180temp$series<-"CEN5180"
+CEN5180temp$version<-"N.A"
+
+
+ggplot(CEN5180ts,aes(x=ts,y=value,color=yr))+
+  geom_point(na.rm=TRUE)+
+  labs(title="CEN5180 Stem Diameter Changes",x="Date",y="Stem Diameter Change
+  (µm)",color="Legend") +
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()
+```
+Including the temperature dataset increases the thresholds for jump and outlier
+detection in periods of probable frost (i.e. when temperature < `lowtemp`), 
+which are indicated with a horizontal cyan line in the plot.
+
+The increase of the thresholds for outlier detection prevented the 
+classification of the values during the frost shrinkage as outliers.
+
+```{r}
+CEN5180_L2 <- proc_dendro_L2(dendro_L1 = CEN5180ts,temp_L1 = CEN5180temp, tol_out = 2, tol_jump = 3, plot = TRUE, frost_thr = 1, plot_period = "full", plot_export = TRUE, interpol = 3.5*60, frag_len = NULL, plot_name = "CEN5180", tz="GMT") 
+
+#Frost info
+par(mar = c(2.1, 4, 1, 2))
+plot(data = CEN5180_L2, value ~ ts, type = "n", 
+     ylab = paste0("L2 (", "\u00b5", "m)"), las = 1)
+lines(data = CEN5180ts, value ~ ts, col = "grey70")
+lines(data = CEN5180_L2, value ~ ts, col = "#08519c")
+# add abline to indicate frost
+CEN5180_L2_frost <- CEN5180_L2 %>% 
+  dplyr::rename(value_L2 = value)
+plot_frost_period(df = CEN5180_L2_frost)
+
+#L2 processing 
+ggplot((subset(CEN5180_L2, frost == "FALSE")), aes(x=ts))+ geom_point(aes(y=value), color = "grey70")+ geom_point(aes(y=gro_yr), color = "seagreen")+ geom_point(aes(y=twd), color = "red")+labs(title="CEN5180 dendrometer values (gray), annual growth (green), twd (red)")
+```
+#Phase stats and growing season
+Several characteristics of shrinkage and expansion phases can be calculated
+with the function `phase_stats`.
+
+It returns a `data.frame` containing the timing, duration, amplitude
+and slope of the shrinkage (`shrink`) and expansion (`exp`) phases (Table 5). 
+In addition, the parameter `phase_class` identifies days on which radial change
+is likely driven by transpiration (`phase_class = 1`) or temperature 
+(`phase_class = -1`).
+
+To evaluate the identification of shrinkage and expansion phases, all phases 
+can be plotted by setting `plot_phase = TRUE`. The plot shows the 
+maximum (filled circle) and minimum (filled triangle) of the respective phase
+and reports its statistics. Empty circles and triangles show maxima or minima
+of previous or subsequent phases.
+```{r}
+CEN5180_L2_monthly <- proc_dendro_L2(dendro_L1 = CEN5180ts, temp_L1 = CEN5180temp, tol_out = 2, tol_jump = 3, frost_thr = 1, plot = TRUE, interpol = 3.5*60, plot_period = "monthly", plot_export = TRUE, plot_name = "CEN5180_L2_monthly", tz="GMT") 
+
+# Calculate phase statistics as many separate graphs
+phase_stats(dendro_L2 = CEN5180_L2, plot_phase = TRUE, plot_export = TRUE)
+
+# calculate phase_stats as a table
+phase_stats <- phase_stats(dendro_L2 = CEN5180_L2)
+knitr::kable(phase_stats[1:5, ], caption = "**Table 5**: Sample output data of 
+             the function `phase_stats`.")
+
+#GroSeas (issue: returning blank table) maybe because Values are returned starting from the second year only, since `gro_start` and `gro_end` depend on the values from the previous year.
+
+
+dendro_L2 <- CEN5180_L2 %>% filter(series == "CEN5180_L2")
+# Calculate growing season start and end
+grow_seas(dendro_L2 = CEN5180_L2)
+# calculate grow_seas
+grow_seas <- grow_seas(dendro_L2 = CEN5180_L2)
+knitr::kable(grow_seas, caption = "**Table 4**: Sample output data of the 
+             function `grow_seas`.")
+```
+
+```{r}
+#load("C:/Users/gabhr/Downloads/Primet2014_2024 (1).RData")
+#Primet2014_2024$ts<-as.POSIXct(Primet2014_2024$Date,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+#Primet2014_2024$yr<-format(Primet2014_2024$ts,"%Y")
+PrimetTOMST<-Primet2014_2024
+PrimetTOMSTairtemp<-PrimetTOMST|>select(c(AIRTEMP_MEAN_450_0_01,Flag_AIRTEMP_MEAN_450_0_01,ts,yr))
+
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="CQQ"] <- NA
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="Q"] <- NA
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="QQ"] <- NA
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="QQVQQ"] <- NA
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="QV"] <- NA
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="QVCQQ"] <- NA
+PrimetTOMSTairtemp$AIRTEMP_MEAN_450_0_01[PrimetTOMSTairtemp$Flag_AIRTEMP_MEAN_450_0_01=="QVQQ"] <- NA
+PrimetTOMSTairtemp$DOY<-yday(PrimetTOMSTairtemp$ts)
+```
+
+#Should this be max and min instead of mean?
+```{r}
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
+
+# Calculate the 5th and 95th percentiles for each year
+percentiles <- PrimetTOMSTairtemp |>
+  group_by(yr) |>
+  summarize(
+    temp_5th = quantile(AIRTEMP_MEAN_450_0_01, 0.05,na.rm=TRUE),
+    temp_95th = quantile(AIRTEMP_MEAN_450_0_01, 0.95,na.rm=TRUE)
+  )
+
+# Merge the percentiles back into the original data
+PrimetTOMSTairtempPercentiles <- PrimetTOMSTairtemp |>
+  left_join(percentiles, by = "yr")
+
+# Filter the data to include only the temperatures within the range
+PrimetTOMSTairtempPercentilesOnly <- PrimetTOMSTairtempPercentiles |>
+  filter(AIRTEMP_MEAN_450_0_01 <= temp_5th | AIRTEMP_MEAN_450_0_01 >= temp_95th)
+
+# Plot the histogram
+library(ggplot2)
+ggplot(PrimetTOMSTairtempPercentilesOnly, aes(x = DOY, y = AIRTEMP_MEAN_450_0_01, color = factor(yr))) +
+  geom_point() +
+  labs(title = "Highest and Lowest 5% Primet Temperatures",
+       x = "Day of Year", y = "Temperature (°C)") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")
+
+ggplot(PrimetTOMSTairtempPercentilesOnly, aes(x = AIRTEMP_MEAN_450_0_01, color = factor(yr))) +
+  geom_histogram() +
+  labs(title = "Highest and Lowest 5% Primet Temperature Distribution") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()
+
+```
+
+```{r}
+percentiles2 <- PrimetTOMSTairtemp |>
+  group_by(yr) |>
+  summarize(
+    temp_1 = quantile(AIRTEMP_MEAN_450_0_01, 0.01,na.rm=TRUE),
+    temp_99th = quantile(AIRTEMP_MEAN_450_0_01, 0.99,na.rm=TRUE)
+  )
+
+# Merge the percentiles back into the original data
+PrimetTOMSTairtempPercentiles2 <- PrimetTOMSTairtemp |>
+  left_join(percentiles2, by = "yr")
+
+# Filter the data to include only the temperatures within the range
+PrimetTOMSTairtempPercentilesOnly2 <- PrimetTOMSTairtempPercentiles2 |>
+  filter(AIRTEMP_MEAN_450_0_01 <= temp_1 | AIRTEMP_MEAN_450_0_01 >= temp_99th)
+
+# Plot the histogram
+library(ggplot2)
+ggplot(PrimetTOMSTairtempPercentilesOnly2, aes(x = DOY, y = AIRTEMP_MEAN_450_0_01, color = factor(yr))) +
+  geom_point() +
+  labs(title = "Highest and Lowest 1% Primet Temperatures",
+       x = "Day of Year", y = "Temperature (°C)")+   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() + geom_vline(xintercept = 176, linetype = "dashed", color = "black")
+
+ggplot(PrimetTOMSTairtempPercentilesOnly2, aes(x = AIRTEMP_MEAN_450_0_01, color = factor(yr))) +
+  geom_histogram() +
+  labs(title = "Highest and Lowest 1% Primet Temperature Distribution") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()
+```
+
+
+
