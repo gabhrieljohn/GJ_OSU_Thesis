@@ -1,0 +1,1037 @@
+---
+title: "Prov. Portal Data Screening Protocol Adam S"
+output: pdf_document
+date: "2024-11-11"
+---
+
+#Step 1: Assemble Raw Data
+
+```{r}
+#main directory where data resides
+#maindir = '~/data/discovery_tree/'
+#fundir = '~/rscripts/discovery_tree/fun/'
+maindir = '/md1/data/HJA/discovery_tree/'
+fundir = '/md1/rscripts/HJA/discovery_tree/fun/'
+library('dplyr')
+
+#Set the timezone
+Sys.setenv(TZ='PST')
+
+#FUNCTIONS
+source(paste(fundir,'climreadHJA.r',sep=''))
+source(paste(fundir,'assembleHJA.r',sep=''))
+
+
+#FIRST, ASSEMBLE DISCOVERY TREE
+########################################################################################################################
+#keyword in the names of the climate files in the "new" directory which marks the file as containing the data of interest.
+akey = 'dscmet_420_a_'
+bkey = 'dscmet_420_b_'
+ckey = 'dscmet_421_a_'
+dkey = 'dscmet_421_b_'
+
+keylist = list(akey,bkey,ckey,dkey)
+
+#VARIABLE NAMES IN RAW AND SCREENED FILES
+#------------------------------------------------------------------------------#
+vnames = read.csv('/md1/data/HJA/discovery_tree/varnames_2023-03-28.csv',colClasses = 'character')
+
+#Get just the original column,add flag_ columns
+vnames = data.frame(original = c(vnames$original,paste0('Flag_',vnames$original)))
+#------------------------------------------------------------------------------#
+
+#Read in all the data
+#--------------------------------------------------------------------------------------------------------#
+newlist = list()
+
+for(i in 1:length(keylist)){
+  
+  key = paste('*',keylist[[i]],'*',sep='')
+  newstuff = list.files(path = paste(maindir,'raw_2023-03-27',sep=''),pattern = key,full.names = T,recursive = T)
+  newstuff_names = list.files(path = paste(maindir,'raw_2023-03-27',sep=''),pattern = key,full.names = F,recursive = T)
+  
+  newlist.i = list()
+  
+  for(j in 1:length(newstuff)){
+    x = read.table(newstuff[j],sep = ',', skip = 5, header = F, stringsAsFactors = F)
+    colnames(x) = as.character(as.matrix(read.table(newstuff[j], sep = ',', skip = 2, nrows = 1, header = F)))
+    x$Date = as.POSIXct(x$Date)
+    newlist.i[[j]] = x
+  }
+  names(newlist.i) = newstuff_names
+  newlist[[i]] = newlist.i
+  names(newlist)[[i]] = keylist[[i]]
+  
+}
+#--------------------------------------------------------------------------------------------------------#
+
+#Running the assemble function
+#-------------------------------------------------------#
+discovery = assembleHJA(newlist = newlist,vnames,vname_type = 'original',drange = NULL)
+drange = c(as.POSIXct("2018-12-06 00:00:00 PST"),as.POSIXct('2023-03-15 00:00:00 PST'))
+discovery = discovery[which(discovery$timestamp == drange[1]):which(discovery$timestamp == drange[2]),]
+#apply(discovery,2,function(x){length(which(is.na(x)))})*100/nrow(discovery)
+#-------------------------------------------------------#
+
+#Split discovery into "discovery" and "flags"
+flag = discovery[,grep('Flag',colnames(discovery))]
+ts = discovery$timestamp
+dat = discovery[,2:37]
+
+#Save it out
+save(list = c('ts','dat','flag'),file = '/md1/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v0.Rdat')
+
+```
+
+
+#Step 2: Harmonize Flags
+```{r}
+#Set timezone 
+Sys.setenv(TZ = 'PST')
+
+#Read the data
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v0.Rdat')
+
+#DEAL WITH FLAGS
+#-------------------------------------------------------#
+#Figure out what the unique flag values are in the data
+uflag = unique(unlist(apply(flag,2,unique)))
+
+#I = impossible
+#Q = questionable
+#M = missing
+#E = ???
+#V = Value change
+#T = primet soil water content
+#C = Non asp air temp, primet RH, primet vpd, rpimet vap
+#B = Part of snow flags
+
+#Any flag that is M keep M
+#Any flag that is I keep I
+#Any flag that is V keep V
+#Any flag that is Q, T, C, E or B, change to Q
+#Any flag that is NA or "", change to N (for "Normal")
+
+#makeI = which(flag == 'IQ' | flag == 'IVIQ' | flag == 'VIQ' | flag == 'IVQ' | flag == 'VI' | flag == 'MI' | flag == 'QI', arr.ind = T)
+makeI = which(flag == 'IQ' | flag == 'MI' , arr.ind = T)
+flag[makeI] = 'I'
+
+#makeM = which(flag == 'MM' | flag == 'MMM' | flag == 'MT' | flag == 'EM',arr.ind=T)
+makeM = which(flag == 'MM' | flag == 'MQ',arr.ind=T)
+flag[makeM] = 'M'
+
+#makeQ = which(flag == 'VQ' | flag == 'QV' | flag == 'T' | flag == 'C' | flag == 'E' | flag == 'B' | flag == 'NB',arr.ind=T)
+#flag[makeQ] = 'Q'
+
+makeN = which(is.na(flag) | flag == '',arr.ind=T)
+flag[makeN] = 'N'
+
+#change the name of the columns in flag
+colnames(flag) = substr(colnames(flag),6,nchar(colnames(flag)))
+
+#Save that out!
+save(list = c('ts','dat','flag'),file = '~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v0.1.Rdat')
+#-------------------------------------------------------#
+```
+
+
+#Step 3: Make V1 Plots
+```{r}
+#Set timezone
+Sys.setenv(TZ = 'PST')
+
+#Source necessary functions
+source('~/rscripts/HJA/discovery_tree/screening_2023-03-28/screening_functions.r')
+
+#Directory to write figures to
+writedir = '/md1/data/HJA/discovery_tree/screening_2023-03-28/plots_v1/'
+
+#Load the data
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v0.1.Rdat')
+
+#PLOTS
+#-------------------------------------------------------#
+#Dates to loop through
+xbounds = seq(as.POSIXct(substr(ts[1],1,10)),as.POSIXct(substr(tail(ts,1),1,10)),by = 60*60*24*14)
+
+#Loop through plots
+for(i in 1:(length(xbounds)-1)){
+  
+  tsi = timepull(start = xbounds[i],stop = xbounds[i+1],x = ts,ts = ts)   
+  dati = timepull(start = xbounds[i],stop = xbounds[i+1],x = dat,ts = ts)  
+  flagi = timepull(start = xbounds[i],stop = xbounds[i+1],x = flag,ts = ts) 
+  
+  #LEAFWETNESS, RELATIVE HUMIDITY
+  #............................................#
+  {
+  datlist = list(lw = dati[,c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01")],
+                 rh = dati[,c("RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")])
+
+  flaglist = list(lw = flagi[,c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01")],
+                  rh = flagi[,c("RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")])
+
+  collist = list(lwcol = heightcols,
+                 rhcol = c(heightcols[c('0150','5600')],'yellow','purple'))
+
+  ylabs = list(lw = 'Leaf wetness (mV)',rh = 'Relative Humidity (%)')
+  
+  flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+             xvar = tsi,ylabs = ylabs,
+             plotname = paste0(writedir,'LW_RH/LW_RH',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #TEMPERATURE
+  #............................................#
+  {
+    datlist = list(tair = dati[,c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")]
+                   )
+
+    flaglist = list(tair = flagi[,c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")]
+                    )
+
+    collist = list(taircol = heightcols)
+
+    ylabs = list(tair = 'Air Temperature (deg C)',ptair = 'Air Temperature (deg C)')
+
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'TAIR/TAIR_',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #WIND DIRECTION
+  #............................................#
+  {
+    datlist = list(X1 = dati[,c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")],
+                   X2 = dati[,c("WDIR_SNC_MEAN_150_0_01","WDIR_SNC_MEAN_5600_0_01")])
+
+    flaglist = list(X1 = flagi[,c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")],
+                    X2 = flagi[,c("WDIR_SNC_MEAN_150_0_01","WDIR_SNC_MEAN_5600_0_01")])
+
+    collist = list(C1 = c('yellow',heightcols[c('0150','5600')]),
+                   C2 = c('yellow',heightcols[c('0150','5600')]))
+
+    ylabs = list(X1 = 'Wind speed (m/s)', X2 = 'Wind direction')
+
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'WIND/WIND_',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #SOIL TEMPERATURE, 1.5M AIR TEMPERATURE
+  #............................................#
+  {
+    cols1 = c("SOILTEMP_MEAN_0_10_01","SOILTEMP_MEAN_0_20_01","SOILTEMP_MEAN_0_50_01","SOILTEMP_MEAN_0_100_01")
+    
+    datlist = list(X1 = dati[,cols1],
+                   X2 = data.frame(tair0150 = dati$AIRTEMP_MEAN_150_0_01))
+    
+    flaglist = list(X1 = flagi[,cols1],
+                    X2 = data.frame(tair0150 = flagi$AIRTEMP_MEAN_150_0_01))
+    
+    collist = list(C1 = heightcols[1:4],
+                   C2 = 'blue')
+    
+    ylabs = list(X1 = 'Soil Temperature (deg C)',X2 = 'Air Temperature (deg C)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'TSOIL/TSOIL_',xbounds[i],'.jpeg')) 
+  }
+  #............................................#
+  
+  #SOIL WATER CONTENT, 1.5M LEAF WETNESS, PRECIP
+  #............................................#
+  {
+    cols1 = c("SOILWC_MEAN_0_10_01","SOILWC_MEAN_0_20_01","SOILWC_MEAN_0_50_01","SOILWC_MEAN_0_100_01")
+    
+    datlist = list(X1 = dati[,cols1],
+                   X2 = data.frame(lw0150 = dati$LW_MEAN_150_0_01))
+    
+    flaglist = list(X1 = flagi[,cols1],
+                    X2 = data.frame(lw0150 = flagi$LW_MEAN_150_0_01))
+    
+    collist = list(C1 = heightcols[1:4],
+                   C2 = 'darkblue')
+    
+    ylabs = list(X1 = 'Soil Water Content (%)',X2 = 'Leaf wetness (mV)',X3 = 'Precipitation (mm)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'WCSOIL/WCSOIL_',xbounds[i],'.jpeg')) 
+  }
+  #............................................#
+  
+  #FOUR COMPONENT NET RADIATION
+  #............................................#
+  # {
+  #   cols1 = c('p.swin','p.swout')
+  #   cols2 = c('p.lwin','p.lwout')
+  #   
+  #   datlist = list(X1 = dati[,cols1],
+  #                  X2 = dati[,cols2],
+  #                  X3 = data.frame(p.netrad = dati$p.netrad))
+  #   
+  #   flaglist = list(X1 = flagi[,cols1],
+  #                   X2 = flagi[,cols2],
+  #                   X3 = data.frame(p.netrad = flagi$p.netrad))
+  #   
+  #   collist = list(C1 = heightcols[1:2],
+  #                  C2 = heightcols[3:4],
+  #                  C3 = heightcols[5])
+  #   
+  #   ylabs = list(X1 = 'Radiation (W/m2)',X2 = 'Radiation (W/m2)',X3 = 'Radiation (W/m2)')
+  #   
+  #   flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+  #             xvar = tsi,ylabs = ylabs,
+  #             plotname = paste0(writdir,'RADIATION/RADIATION_',xbounds[i],'.jpeg')) 
+  # }
+  #............................................#
+  
+  
+  #ATMOSPHERIC PRESSURE
+  #............................................#
+  # {
+  #   
+  #   datlist = list(X1 = data.frame(p.atmpress = dati$p.atmpress))
+  #   
+  #   flaglist = list(X1 = data.frame(p.atmpress = flagi$p.atmpress))
+  #   
+  #   collist = list(C1 = 'darkblue')
+  #   
+  #   ylabs = list(X1 = 'Atmospheric pressure (mbar)')
+  #   
+  #   flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+  #             xvar = tsi,ylabs = ylabs,
+  #             plotname = paste0(writdir,'ATMPRESS/ATMPRESS_',xbounds[i],'.jpeg')) 
+  # }
+  #............................................#
+  print(xbounds[i])
+}
+
+```
+
+
+#Step 4: Do V1 Screenings
+```{r}
+
+#Set time zone
+Sys.setenv(TZ = 'PST')
+
+#Source needed functions
+source('~/rscripts/HJA/discovery_tree/screening_2023-03-28/screening_functions.r')
+
+#Load data
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v0.1.Rdat')
+
+#Make dat, flag and ts global
+dat <<- dat
+flag <<- flag
+#ts <<- ts
+
+#OK, Implement the decisions from looking at the screening plots
+#screenboi = function(dat = dat, flag = flag, ts = ts, vars = vars, derivs = NULL, from, to, badflag = NULL, goodrange = NULL)
+#--------------------------------------------------------------#
+#Soil temperature: accept all error flags at all depths
+badflag = c('I','Q')
+goodrange = NULL
+vars = c("SOILTEMP_MEAN_0_10_01","SOILTEMP_MEAN_0_20_01","SOILTEMP_MEAN_0_50_01","SOILTEMP_MEAN_0_100_01")
+from = ts[1]
+to = tail(ts,1)
+screenboi(badflag = badflag, from = from, to = to)
+
+#Soil water content: accept all Impossible flags. Leave Questionable flags for now
+badflag = c('I','Q')
+goodrange = NULL
+vars = c("SOILWC_MEAN_0_10_01","SOILWC_MEAN_0_20_01","SOILWC_MEAN_0_50_01","SOILWC_MEAN_0_100_01")
+from = ts[1]
+to = tail(ts,1)
+screenboi(badflag = badflag, from = from, to = to)
+
+#Radiation: Accept all flags. It is only necessary to do the shortwave in - no flags in other components
+# badflag = c('I','Q')
+# goodrange = NULL
+# vars = 'p.swin'
+# from = ts[1]
+# to = tail(ts,1)
+# screenboi(badflag = badflag, from = from, to = to)
+
+#Wind Speed and direction: Accept all flags for wind speed. Leave wind direction alone. 
+badflag = c('I','Q')
+goodrange = NULL
+vars = c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")
+from = ts[1]
+to = tail(ts,1)
+screenboi(badflag = badflag, from = from, to = to)
+
+#Atmospheric pressure: Accept all flags 
+# badflag = c('I','Q')
+# goodrange = NULL
+# vars = 'p.atmpress'
+# from = ts[1]
+# to = tail(ts,1)
+# screenboi(badflag = badflag, from = from, to = to)
+
+#Air temperature: accept all error flags at all levels up until 2018-06-19. after that, must evaluate further. 
+badflag = c('I','Q')
+goodrange = NULL
+vars = c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")
+from = ts[1]
+to = tail(ts,1)
+screenboi(badflag = badflag, from = from, to = to)
+
+#Accept all LW, precip and RH flags
+badflag = c('I','Q')
+goodrange = NULL
+vars = c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01","RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")
+from = ts[1]
+to = tail(ts,1)
+screenboi(badflag = badflag, from = from, to = to)
+
+
+#Use the "R" flag to remove any values that were dependent on one of the screened fundamental values above.
+#Dependencies are built into the remove.dependent function. Look at that function in "discovery_tree_functions.r" 
+#To see what the dependendices are. 
+remove.dependent()
+
+#WRITE OUT THE  SCREENED DATA
+save(list = c('dat','flag','ts'),file = '~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v1.Rdat')
+```
+
+
+
+#Step 5: Make V2 Plots
+```{r}
+#Set the time zone
+Sys.setenv(TZ = 'PST')
+
+#Data
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v1.Rdat')
+
+#Necessary functions
+source('~/rscripts/HJA/discovery_tree/screening_2023-03-28/screening_functions.r')
+
+#Where to write out the plots
+writedir = '~/data/HJA/discovery_tree/screening_2023-03-28/plots_v2/'
+if(!file.exists(paste0(writedir,'LW_RH'))){system(paste0('mkdir ',writedir,'LW_RH'))}
+if(!file.exists(paste0(writedir,'TAIR'))){system(paste0('mkdir ',writedir,'TAIR'))}
+if(!file.exists(paste0(writedir,'TSOIL'))){system(paste0('mkdir ',writedir,'TSOIL'))}
+if(!file.exists(paste0(writedir,'WCSOIL'))){system(paste0('mkdir ',writedir,'WCSOIL'))}
+if(!file.exists(paste0(writedir,'WIND'))){system(paste0('mkdir ',writedir,'WIND'))}
+
+
+#PLOTS
+#-------------------------------------------------------#
+#Dates to loop through
+xbounds = seq(as.POSIXct(substr(ts[1],1,10)),as.POSIXct(substr(tail(ts,1),1,10)),by = 60*60*24*14)
+
+#Loop through plots
+for(i in 1:(length(xbounds)-1)){
+  
+  tsi = timepull(start = xbounds[i],stop = xbounds[i+1],x = ts,ts = ts)   
+  dati = timepull(start = xbounds[i],stop = xbounds[i+1],x = dat,ts = ts)  
+  flagi = timepull(start = xbounds[i],stop = xbounds[i+1],x = flag,ts = ts) 
+  
+  #LEAFWETNESS, RELATIVE HUMIDITY
+  #............................................#
+  {
+    datlist = list(lw = dati[,c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01")],
+                   rh = dati[,c("RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")])
+    
+    flaglist = list(lw = flagi[,c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01")],
+                    rh = flagi[,c("RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")])
+    
+    collist = list(lwcol = heightcols,
+                   rhcol = c(heightcols[c('0150','5600')],'yellow','purple'))
+    
+    ylabs = list(lw = 'Leaf wetness (mV)',rh = 'Relative Humidity (%)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'LW_RH/LW_RH',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #TEMPERATURE
+  #............................................#
+  {
+    datlist = list(tair = dati[,c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")]
+    )
+    
+    flaglist = list(tair = flagi[,c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")]
+    )
+    
+    collist = list(taircol = heightcols)
+    
+    ylabs = list(tair = 'Air Temperature (deg C)',ptair = 'Air Temperature (deg C)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'TAIR/TAIR_',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #WIND DIRECTION
+  #............................................#
+  {
+    datlist = list(X1 = dati[,c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")],
+                   X2 = dati[,c("WDIR_SNC_MEAN_150_0_01","WDIR_SNC_MEAN_5600_0_01")])
+    
+    flaglist = list(X1 = flagi[,c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")],
+                    X2 = flagi[,c("WDIR_SNC_MEAN_150_0_01","WDIR_SNC_MEAN_5600_0_01")])
+    
+    collist = list(C1 = c('yellow',heightcols[c('0150','5600')]),
+                   C2 = c('yellow',heightcols[c('0150','5600')]))
+    
+    ylabs = list(X1 = 'Wind speed (m/s)', X2 = 'Wind Direction')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'WIND/WIND_',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #SOIL TEMPERATURE, 1.5M AIR TEMPERATURE
+  #............................................#
+  {
+    cols1 = c("SOILTEMP_MEAN_0_10_01","SOILTEMP_MEAN_0_20_01","SOILTEMP_MEAN_0_50_01","SOILTEMP_MEAN_0_100_01")
+    
+    datlist = list(X1 = dati[,cols1],
+                   X2 = data.frame(tair0150 = dati$AIRTEMP_MEAN_150_0_01))
+    
+    flaglist = list(X1 = flagi[,cols1],
+                    X2 = data.frame(tair0150 = flagi$AIRTEMP_MEAN_150_0_01))
+    
+    collist = list(C1 = heightcols[1:4],
+                   C2 = 'blue')
+    
+    ylabs = list(X1 = 'Soil Temperature (deg C)',X2 = 'Air Temperature (deg C)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'TSOIL/TSOIL_',xbounds[i],'.jpeg')) 
+  }
+  #............................................#
+  
+  #SOIL WATER CONTENT, 1.5M LEAF WETNESS, PRECIP
+  #............................................#
+  {
+    cols1 = c("SOILWC_MEAN_0_10_01","SOILWC_MEAN_0_20_01","SOILWC_MEAN_0_50_01","SOILWC_MEAN_0_100_01")
+    
+    datlist = list(X1 = dati[,cols1],
+                   X2 = data.frame(lw0150 = dati$LW_MEAN_150_0_01))
+    
+    flaglist = list(X1 = flagi[,cols1],
+                    X2 = data.frame(lw0150 = flagi$LW_MEAN_150_0_01))
+    
+    collist = list(C1 = heightcols[1:4],
+                   C2 = 'darkblue')
+    
+    ylabs = list(X1 = 'Soil Water Content (%)',X2 = 'Leaf wetness (mV)',X3 = 'Precipitation (mm)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'WCSOIL/WCSOIL_',xbounds[i],'.jpeg')) 
+  }
+  #............................................#
+  
+  #FOUR COMPONENT NET RADIATION
+  #............................................#
+  # {
+  #   cols1 = c('p.swin','p.swout')
+  #   cols2 = c('p.lwin','p.lwout')
+  #   
+  #   datlist = list(X1 = dati[,cols1],
+  #                  X2 = dati[,cols2],
+  #                  X3 = data.frame(p.netrad = dati$p.netrad))
+  #   
+  #   flaglist = list(X1 = flagi[,cols1],
+  #                   X2 = flagi[,cols2],
+  #                   X3 = data.frame(p.netrad = flagi$p.netrad))
+  #   
+  #   collist = list(C1 = heightcols[1:2],
+  #                  C2 = heightcols[3:4],
+  #                  C3 = heightcols[5])
+  #   
+  #   ylabs = list(X1 = 'Radiation (W/m2)',X2 = 'Radiation (W/m2)',X3 = 'Radiation (W/m2)')
+  #   
+  #   flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+  #             xvar = tsi,ylabs = ylabs,
+  #             plotname = paste0(writdir,'RADIATION/RADIATION_',xbounds[i],'.jpeg')) 
+  # }
+  #............................................#
+  
+  
+  #ATMOSPHERIC PRESSURE
+  #............................................#
+  # {
+  #   
+  #   datlist = list(X1 = data.frame(p.atmpress = dati$p.atmpress))
+  #   
+  #   flaglist = list(X1 = data.frame(p.atmpress = flagi$p.atmpress))
+  #   
+  #   collist = list(C1 = 'darkblue')
+  #   
+  #   ylabs = list(X1 = 'Atmospheric pressure (mbar)')
+  #   
+  #   flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+  #             xvar = tsi,ylabs = ylabs,
+  #             plotname = paste0(writdir,'ATMPRESS/ATMPRESS_',xbounds[i],'.jpeg')) 
+  # }
+  #............................................#
+  print(xbounds[i])
+}
+```
+
+
+
+#Step 6: Do V2 Screenings
+```{r}
+#Set time zone
+Sys.setenv(TZ = 'PST')
+
+#Source needed functions
+source('~/rscripts/HJA/discovery_tree/screening_2023-03-28/screening_functions.r')
+
+#Load data
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v1.Rdat')
+
+#Make dat, flag and ts global
+dat <<- dat
+flag <<- flag
+#ts <<- ts
+
+#Make decisions
+#--------------------------------------------------------------#
+#Wind Speed and direction: Get rid of one time period @ 56m where the sensor flatlined at zero 
+badID = which(ts == '2020-12-28 12:00:00'):which(ts == '2021-02-24 15:20:00')
+plot(dat$WSPD_SNC_MEAN_5600_0_01[badID],x = ts[badID])
+
+dat$WSPD_SNC_MEAN_5600_0_01[badID] = NA
+flag$WSPD_SNC_MEAN_5600_0_01[badID] = 'R'
+#--------------------------------------------------------------#
+
+
+#WRITE OUT THE  SCREENED DATA
+save(list = c('dat','flag','ts'),file = '~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v2.Rdat')
+```
+
+
+
+#Step 7: Make final plots
+```{r}
+#Set the time zone
+Sys.setenv(TZ = 'PST')
+
+#Data
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v2.Rdat')
+
+#Necessary functions
+source('~/rscripts/HJA/discovery_tree/screening_2023-03-28/screening_functions.r')
+
+#Where to write out the plots
+writedir = '~/data/HJA/discovery_tree/screening_2023-03-28/plots_final/'
+if(!file.exists(paste0(writedir,'LW_RH'))){system(paste0('mkdir ',writedir,'LW_RH'))}
+if(!file.exists(paste0(writedir,'TAIR'))){system(paste0('mkdir ',writedir,'TAIR'))}
+if(!file.exists(paste0(writedir,'TSOIL'))){system(paste0('mkdir ',writedir,'TSOIL'))}
+if(!file.exists(paste0(writedir,'WCSOIL'))){system(paste0('mkdir ',writedir,'WCSOIL'))}
+if(!file.exists(paste0(writedir,'WIND'))){system(paste0('mkdir ',writedir,'WIND'))}
+
+
+#PLOTS
+#-------------------------------------------------------#
+#Dates to loop through
+xbounds = seq(as.POSIXct(substr(ts[1],1,10)),as.POSIXct(substr(tail(ts,1),1,10)),by = 60*60*24*14)
+
+#Loop through plots
+for(i in 1:(length(xbounds)-1)){
+  
+  tsi = timepull(start = xbounds[i],stop = xbounds[i+1],x = ts,ts = ts)   
+  dati = timepull(start = xbounds[i],stop = xbounds[i+1],x = dat,ts = ts)  
+  flagi = timepull(start = xbounds[i],stop = xbounds[i+1],x = flag,ts = ts) 
+  
+  #LEAFWETNESS, RELATIVE HUMIDITY
+  #............................................#
+  {
+    datlist = list(lw = dati[,c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01")],
+                   rh = dati[,c("RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")])
+    
+    flaglist = list(lw = flagi[,c("LW_MEAN_150_0_01","LW_MEAN_1000_0_01","LW_MEAN_2000_0_01","LW_MEAN_3000_0_01","LW_MEAN_4000_0_01","LW_MEAN_5600_0_01")],
+                    rh = flagi[,c("RELHUM_MEAN_150_0_01","RELHUM_MEAN_5600_0_01")])
+    
+    collist = list(lwcol = heightcols,
+                   rhcol = c(heightcols[c('0150','5600')],'yellow','purple'))
+    
+    ylabs = list(lw = 'Leaf wetness (mV)',rh = 'Relative Humidity (%)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'LW_RH/LW_RH',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #TEMPERATURE
+  #............................................#
+  {
+    datlist = list(tair = dati[,c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")]
+    )
+    
+    flaglist = list(tair = flagi[,c("AIRTEMP_MEAN_150_0_01","AIRTEMP_MEAN_1000_0_01","AIRTEMP_MEAN_2000_0_01","AIRTEMP_MEAN_3000_0_01","AIRTEMP_MEAN_4000_0_01","AIRTEMP_MEAN_5600_0_01")]
+    )
+    
+    collist = list(taircol = heightcols)
+    
+    ylabs = list(tair = 'Air Temperature (deg C)',ptair = 'Air Temperature (deg C)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'TAIR/TAIR_',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #WIND DIRECTION
+  #............................................#
+  {
+    datlist = list(X1 = dati[,c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")],
+                   X2 = dati[,c("WDIR_SNC_MEAN_150_0_01","WDIR_SNC_MEAN_5600_0_01")])
+    
+    flaglist = list(X1 = flagi[,c("WSPD_SNC_MEAN_150_0_01","WSPD_SNC_MEAN_5600_0_01")],
+                    X2 = flagi[,c("WDIR_SNC_MEAN_150_0_01","WDIR_SNC_MEAN_5600_0_01")])
+    
+    collist = list(C1 = c('yellow',heightcols[c('0150','5600')]),
+                   C2 = c('yellow',heightcols[c('0150','5600')]))
+    
+    ylabs = list(X1 = 'Wind speed (m/s)', X2 = 'Wind Direction')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'WIND/WIND_',xbounds[i],'.jpeg'))
+  }
+  #............................................#
+  
+  #SOIL TEMPERATURE, 1.5M AIR TEMPERATURE
+  #............................................#
+  {
+    cols1 = c("SOILTEMP_MEAN_0_10_01","SOILTEMP_MEAN_0_20_01","SOILTEMP_MEAN_0_50_01","SOILTEMP_MEAN_0_100_01")
+    
+    datlist = list(X1 = dati[,cols1],
+                   X2 = data.frame(tair0150 = dati$AIRTEMP_MEAN_150_0_01))
+    
+    flaglist = list(X1 = flagi[,cols1],
+                    X2 = data.frame(tair0150 = flagi$AIRTEMP_MEAN_150_0_01))
+    
+    collist = list(C1 = heightcols[1:4],
+                   C2 = 'blue')
+    
+    ylabs = list(X1 = 'Soil Temperature (deg C)',X2 = 'Air Temperature (deg C)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'TSOIL/TSOIL_',xbounds[i],'.jpeg')) 
+  }
+  #............................................#
+  
+  #SOIL WATER CONTENT, 1.5M LEAF WETNESS, PRECIP
+  #............................................#
+  {
+    cols1 = c("SOILWC_MEAN_0_10_01","SOILWC_MEAN_0_20_01","SOILWC_MEAN_0_50_01","SOILWC_MEAN_0_100_01")
+    
+    datlist = list(X1 = dati[,cols1],
+                   X2 = data.frame(lw0150 = dati$LW_MEAN_150_0_01))
+    
+    flaglist = list(X1 = flagi[,cols1],
+                    X2 = data.frame(lw0150 = flagi$LW_MEAN_150_0_01))
+    
+    collist = list(C1 = heightcols[1:4],
+                   C2 = 'darkblue')
+    
+    ylabs = list(X1 = 'Soil Water Content (%)',X2 = 'Leaf wetness (mV)',X3 = 'Precipitation (mm)')
+    
+    flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+              xvar = tsi,ylabs = ylabs,
+              plotname = paste0(writedir,'WCSOIL/WCSOIL_',xbounds[i],'.jpeg')) 
+  }
+  #............................................#
+  
+  #FOUR COMPONENT NET RADIATION
+  #............................................#
+  # {
+  #   cols1 = c('p.swin','p.swout')
+  #   cols2 = c('p.lwin','p.lwout')
+  #   
+  #   datlist = list(X1 = dati[,cols1],
+  #                  X2 = dati[,cols2],
+  #                  X3 = data.frame(p.netrad = dati$p.netrad))
+  #   
+  #   flaglist = list(X1 = flagi[,cols1],
+  #                   X2 = flagi[,cols2],
+  #                   X3 = data.frame(p.netrad = flagi$p.netrad))
+  #   
+  #   collist = list(C1 = heightcols[1:2],
+  #                  C2 = heightcols[3:4],
+  #                  C3 = heightcols[5])
+  #   
+  #   ylabs = list(X1 = 'Radiation (W/m2)',X2 = 'Radiation (W/m2)',X3 = 'Radiation (W/m2)')
+  #   
+  #   flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+  #             xvar = tsi,ylabs = ylabs,
+  #             plotname = paste0(writdir,'RADIATION/RADIATION_',xbounds[i],'.jpeg')) 
+  # }
+  #............................................#
+  
+  
+  #ATMOSPHERIC PRESSURE
+  #............................................#
+  # {
+  #   
+  #   datlist = list(X1 = data.frame(p.atmpress = dati$p.atmpress))
+  #   
+  #   flaglist = list(X1 = data.frame(p.atmpress = flagi$p.atmpress))
+  #   
+  #   collist = list(C1 = 'darkblue')
+  #   
+  #   ylabs = list(X1 = 'Atmospheric pressure (mbar)')
+  #   
+  #   flagplots(datlist = datlist,flaglist = flaglist,start = NULL,stop = NULL,plotcols = collist,
+  #             xvar = tsi,ylabs = ylabs,
+  #             plotname = paste0(writdir,'ATMPRESS/ATMPRESS_',xbounds[i],'.jpeg')) 
+  # }
+  #............................................#
+  print(xbounds[i])
+}
+```
+
+
+#Step 8: Individualize tables
+```{r}
+#Set time zone
+Sys.setenv(TZ = 'PST')
+
+#Write directory
+writedir = '~/data/HJA/discovery_tree/screening_2023-03-28/official_repo/'
+
+#The data
+#-------------------------------------------------------------------------------#
+load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v2.Rdat')
+
+#Cut it down to just 2018-12-05 23:55:00 (night before 56m sensor failure)
+# cutID = which(ts == '2018-12-05 23:55:00')
+# dat = dat[1:cutID,]
+# flag = flag[1:cutID,]
+# ts = ts[1:cutID]
+
+uflag = unique(unlist(apply(flag,2,unique)))
+
+#Simplify flags. I and V go to Q. R goes to M. N goes to A. 
+flag[which(flag == 'R',arr.ind = T)] = 'M'
+#flag[which(flag == 'I',arr.ind = T)] = 'Q'
+flag[which(flag == 'V',arr.ind = T)] = 'Q'
+flag[which(flag == 'N',arr.ind = T)] = 'A'
+
+#If any data is NA for any reason, make the flag "M"
+naID = which(is.na(dat),arr.ind=T)
+dim(naID)
+flag[naID] = 'M'
+
+
+uflag = unique(unlist(apply(flag,2,unique)))
+#-------------------------------------------------------------------------------#
+
+#Variables names in raw and screened files
+vnames = read.csv('~/data/HJA/discovery_tree/screening_2023-03-28/varnames_dscmet_individualize.csv',colClasses = 'character')
+
+#epuller1 function: sticks all vars from an entity together
+epuller1 = function(entity){
+  
+  vlist = list()
+  
+  loopID = which(vnames$ENTITY == entity) 
+
+  for(i in 1:length(loopID)){
+  
+    vi = vnames[loopID[i],]
+  
+    idat = dat[which(colnames(dat) == vi$all)]
+  
+    #Remove any leading or trailing NAs
+    if(is.na(idat[1,])){
+      x = rle(is.na(as.numeric(as.matrix((idat)))))
+      ID1 = x$lengths[1]+1
+    }else{ID1 = 1}
+    if(is.na(tail(idat[,1],1))){
+      x = rle(is.na(as.numeric(as.matrix((idat)))))
+      ID2 = nrow(idat) - tail(x$lengths,1)
+    }else{ID2 = nrow(idat)}
+    ID = ID1:ID2
+  
+    #Create the DBCODE, ENTITY, PROBE_CODE
+    DBCODE = rep(vi$DBCODE,length(ID))
+    ENTITY = rep(entity,length(ID))
+    PROBE_CODE = rep(vi$PROBE_CODE,length(ID))
+    SITECODE = rep(vi$SITECODE,length(ID))
+  
+    #Pull out the variable and flag
+    VARI = dat[ID,which(colnames(dat) == vi$all)]
+    FLAGI = flag[ID,which(colnames(flag) == vi$all)]
+    DATE_TIME = ts[ID]
+  
+    #Make the Dataframe
+    dfi = data.frame(DBCODE = DBCODE, SITECODE = SITECODE, ENTITY = ENTITY, PROBE_CODE = PROBE_CODE,DATE_TIME = DATE_TIME, VARI = VARI, FLAGI = FLAGI)
+  
+    colnames(dfi)[6] = vi$VARNAME
+    colnames(dfi)[7] = vi$FLAGNAME
+    
+    vlist[[i]] = dfi
+  }  
+
+  out = do.call('rbind',vlist)
+  out = out[order(out$DATE_TIME,out$PROBE_CODE),]
+  
+  print(vi$VARNAME)
+  print(vi$FLAGNAME)
+  print(paste0('First record ',min(out$DATE_TIME)))
+  print(paste0('Last record ',max(out$DATE_TIME)))
+  
+  print(paste0('Minimum value ',min(out[,6],na.rm=T)))
+  print(paste0('Maxiumum value ',max(out[,6],na.rm=T)))
+  
+  return(out)
+}
+
+#epuller2 function: sticks all vars from an entity together when the entity has ....something?..... probe codes
+epuller2 = function(entity){
+  
+  vlist = list()
+  
+  vnames1 = vnames[which(vnames$ENTITY == entity),] 
+  
+  probes = unique(vnames1$PROBE_CODE)
+  
+  for(i in 1:length(probes)){
+    
+    vi = vnames1[which(vnames1$PROBE_CODE == probes[i]),]
+    
+    idat = dat[,match(vi$all, colnames(dat))]
+    
+    #Remove any leading or trailing NAs
+    natester = apply(idat,1,FUN = function(x){all(is.na(x))})
+    if(natester[1] == T){
+      x = rle(natester)
+      ID1 = x$lengths[1]+1
+    }else{ID1 = 1}
+    if(tail(natester,1) == T){
+      x = rle(natester)
+      ID2 = nrow(idat) - tail(x$lengths,1)
+    }else{ID2 = nrow(idat)}
+    ID = ID1:ID2
+    
+    #Create the DBCODE, ENTITY, PROBE_CODE
+    DBCODE = rep(vi$DBCODE[1],length(ID))
+    ENTITY = rep(entity,length(ID))
+    PROBE_CODE = rep(vi$PROBE_CODE[1],length(ID))
+    SITECODE = rep(vi$SITECODE[1],length(ID))
+    
+    #Pull out the variable and flag
+    VARI = dat[ID,match(vi$all,colnames(dat))]
+    FLAGI = flag[ID,match(vi$all,colnames(flag))]
+    DATE_TIME = ts[ID]
+    
+    #Make the Dataframe
+    dfi = data.frame(DBCODE = DBCODE, SITECODE = SITECODE, ENTITY = ENTITY, PROBE_CODE = PROBE_CODE,DATE_TIME = DATE_TIME, VARI = VARI, FLAGI = FLAGI)
+    
+    colnames(dfi)[6:(5+nrow(vi))] = vi$VARNAME
+    colnames(dfi)[(6+nrow(vi)):(5+nrow(vi)+nrow(vi))] = vi$FLAGNAME
+    
+    vlist[[i]] = dfi
+  }  
+  
+  out = do.call('rbind',vlist)
+  out = out[order(out$DATE_TIME,out$PROBE_CODE),]
+  
+  print(vi$VARNAME)
+  print(vi$FLAGNAME)
+  print(paste0('First record ',min(out$DATE_TIME)))
+  print(paste0('Last record ',max(out$DATE_TIME)))
+  
+  #print(paste0('Minimum value ',min(out[,6],na.rm=T)))
+  #print(paste0('Maxiumum value ',max(out[,6],na.rm=T)))
+  
+  return(out)
+}
+
+#Entity 1: Air temperature
+ent = 1
+e1 = epuller1(ent)  
+write.csv(e1,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+  
+#Entity 2: Dewpoint temperature
+ent = 2
+e2 = epuller1(ent)  
+write.csv(e2,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 3: Relative Humidity
+ent = 3
+e3 = epuller1(ent)  
+write.csv(e3,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 4: Saturated vapor pressure
+ent = 4
+e4 = epuller2(ent)  
+write.csv(e4,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 5: Vapor pressure deficit
+ent = 5
+e5 = epuller1(ent)  
+write.csv(e5,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 6: Leaf Wetness
+ent = 6
+e6 = epuller1(ent)  
+write.csv(e6,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 7: Wind stuff
+ent = 7
+e7 = epuller2(ent)  
+write.csv(e7,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 8: Soil temperature
+ent = 8
+e8 = epuller1(ent)  
+write.csv(e8,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Entity 9: Soil water content
+ent = 9
+e9 = epuller1(ent)  
+write.csv(e9,file = paste0(writedir,vnames$FILENAME[which(vnames$ENTITY == ent)[1]],'.csv'),na = 'NULL',row.names=F, quote = F)
+
+#Done!
+
+
+
+# OLD STUFF
+# #Set the time zone
+# Sys.setenv(TZ = 'PST')
+# 
+# #Data
+# load('~/data/HJA/discovery_tree/screening_2023-03-28/dt_and_flag_screening_v2.Rdat')
+# 
+# #Checking the case mentioned
+# checkID = which(ts == '2019-01-03 10:10')
+# 
+# dat[checkID,]
+# flag[checkID,]
+# 
+# #Check Airtemp 
+# airdsc = read.csv('/md1/data/HJA/discovery_tree/screening_2023-03-28/official_repo/AIRDSC.csv')
+# checkID2 = which(airdsc$DATE_TIME == '2019-01-03 10:10:00')
+# airdsc[checkID2,]
+# 
+# #Check Dewpt
+# dewdsc = read.csv('/md1/data/HJA/discovery_tree/screening_2023-03-28/official_repo/DEWDSC.csv')
+# 
+# checkID2 = which(dewdsc$DATE_TIME == '2019-01-03 10:10:00')
+# dewdsc[checkID2,]
+```
+

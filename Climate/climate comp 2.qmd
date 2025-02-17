@@ -1,0 +1,29 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Quarto
+```{r}
+ load("C:/Users/gab4a/Downloads/Primet2014_2024.RData")
+
+flag <- "Flag_"
+# Identify columns that start with the given prefix
+matching_cols <- grep(paste0("^", flag), names(Primet2014_2024), value = TRUE)
+# Combine the columns and find unique values
+unique_values <- unique(unlist(Primet2014_2024[ , matching_cols]))
+# Print the unique values
+print(unique_values)
+
+#Output: [1] ""      "Q"     "M"     NA      "NB"    "B"     "VQ"    "VQQ"   "V"     "E"     "QQ"    "QVQQ" "C"     "QVCQ"  "QQVQQ" "QV"    "QVCQQ" "CQQ"   "QQQ"   "T"     "QT"    "MM"    "MT"    "EM"   
+"FALSE" "F" 
+
+#Any flag that is Q, T, C, E or B, change to Q
+```
+```{r}
+#Filtering flags after searching in R environment object where flags show up 
+Primet2014_2024$SWC_MEAN_0_100_04[Primet2014_2024$Flag_WDIR_PRO_STDDEV_1000_0_01==c("Q","B","VQ","VQQ", "QQ","QVQQ","C","QVCQ","QQVQQ","QV","QVCQQ","CQQ","QQQ","T","QT","MM","MT","EM","FALSE","F")] <- NA
+```
+
+

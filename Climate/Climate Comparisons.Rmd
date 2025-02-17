@@ -1,0 +1,1584 @@
+---
+title: "Climate variables"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+#Loading in packages to be used
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(viridis)
+library(tidyr)
+library(lubridate)
+library(R.matlab)
+#atomspheric drought vs soil drought in 2021 vs other years to tease out effects of drought vs tree experience
+```
+
+
+#Overview of data origins
+Note that VPD will be alongside humidity 
+
+Benchmark Stations - MS001
+Primet 226a: RETIRED non-fan-asp air temperature, relative humidity, water vapor, battery supply, snow depth, and wind speed and direction. Dates cover Oct 2013-Oct 2022
+Primet 229a: RETIRED fan-aspirated air temperature [including 4.5m] and four component radiation. Dates cover Oct 2013-Oct 2022
+Primet 229b: RETIRED wind speed and wind direction. Dates cover Oct 2013-Oct 2022
+Primet 230a: battery supply, barometric pressure, swe, soil temperature, incoming shortwave radiation, precipitation, soil moisture. Dates cover Oct 2013-current
+Primet 239a: non-fan-asp air temperature [including 4.5m], relative humidity, water vapor, battery supply, snow depth, and wind speed and direction. Dates cover Oct 2022-current (replaced 226a)
+
+DSCMet 420a: Below canopy variables include: air temperature, relative humidity, water vapor, and leaf wetness. Dates cover Sep6 2014-current
+DSCMET 420b: Below canopy variables include: sonic wind speed and direction. Dates cover Nov21 2016-current
+DSCMet 421a:  Above canopy variables include: air temperature, relative humidity, water vapor, and leaf wetness. Dates cover Aug2 2016-current
+DSCMet 421b: Above canopy variables include: sonic wind speed and direction. Dates cover Nov10 2016-current 
+DSCMet 422a: dendrometer. Dates cover July12 2018-current
+
+
+Flag codes from Adam S
+I = impossible / out of range
+Q = questionable
+M = missing
+E = data value estimated by interpolation
+V = Value change
+T = primet soil water content
+C = Non asp air temp, primet RH, primet vpd, rpimet vap
+B = Part of snow flags
+
+
+#Jan-Dec-> Oct-Sep YR Function
+```{r}
+#Be sure to have the dataframe averaged by day so the DOY output is in integers.
+
+# Defining a function to calculate the Day of Water Year with the start on Oct 1st of the prior year. Initial timestamp data should already be in as.POSIXct format and grouped by day.
+
+#Example: 
+  #df$Date<-as.POSIXct(df$Date,format="%Y-%m-%d %H:%M:%S")
+  #df$day<-format(df$Date,"%Y-%m-%d")
+  #DailyAvg_df<- df |> group_by(day) |> summarise(DailyAvg = mean(variable, na.rm = TRUE))
+  #DailyAvg_df$DOWY<-sapply(df$day, DOY_water_year)
+  #DailyAvg_df$Wyr<-sapply(DailyAvg_df$day, water_year)
+
+
+
+DOY_water_year <- function(date) {
+  # Ensure the date is in Date format
+    if (is.na(date)) {
+    return(NA)
+  }
+  date <- as.POSIXct(date,format="%Y-%m-%d")
+  # Extract the year and month
+  year <- year(date)
+  month <- month(date)
+  day<-day(date)
+  # Adjust the year for the water year start (October 1st of the previous year)
+  if (month >= 10) {
+    water_year_start <- as.Date(paste(year, "-10-01", sep = ""))
+  } else {
+    water_year_start <- as.Date(paste(year - 1, "-10-01", sep = ""))
+  }
+  
+  # Calculate the DOY relative to the water year start
+  doy <- as.integer(difftime(date, water_year_start, units = "days")) + 1
+  
+  return(doy)
+}
+
+
+# Same but this time for water year.
+water_year <- function(date) {
+  # Ensure the date is in Date format
+    if (is.na(date)) {
+    return(NA)
+  }
+  date <- as.POSIXct(date,format="%Y-%m-%d")
+  # Extract the year and month
+  year <- year(date)
+  month <- month(date)
+  # Determine the water year
+  if (month >= 10) {
+    water_year <- year+1
+  } else {
+    water_year <- year 
+  }
+  return(water_year)
+}
+
+example<-as.POSIXct("2013-10-01 00:05:00")
+DOY_water_year(example)
+#Should give "[1] 1" as the output
+```
+```{r}
+#Tabling this for now P229a <- readMat("C:/Users/Gabby/Downloads/primet_229_a_5min_merged.mat")
+```
+#Reading in/combining P226A
+```{r}
+primet_226_a_5min_2014 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2014.csv", na.strings="NaN")
+primet_226_a_5min_2015 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2015.csv", na.strings="NaN")
+primet_226_a_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2016.csv", na.strings="NaN")
+primet_226_a_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2017.csv", na.strings="NaN")
+primet_226_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2018.csv", na.strings="NaN")
+primet_226_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2019.csv", na.strings="NaN")
+primet_226_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2020.csv", na.strings="NaN")
+primet_226_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2021.csv", na.strings="NaN")
+primet_226_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2022.csv", na.strings="NaN")
+primet_226_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2023.csv", na.strings="NaN")
+
+#Combining into one dataframe (bind_rows because col names change in 2019)
+P226long <- bind_rows(
+  primet_226_a_5min_2014,
+  primet_226_a_5min_2015,
+  primet_226_a_5min_2016,
+  primet_226_a_5min_2017,
+  primet_226_a_5min_2018,
+  primet_226_a_5min_2019,
+  primet_226_a_5min_2020,
+  primet_226_a_5min_2021,
+  primet_226_a_5min_2022,
+  primet_226_a_5min_2023)
+```
+
+#Reading in/combining P229A
+```{r}
+primet_229_a_5min_2014 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2014.csv", na.strings="NaN")
+primet_229_a_5min_2015 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2015.csv", na.strings="NaN")
+primet_229_a_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2016.csv", na.strings="NaN")
+primet_229_a_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2017.csv", na.strings="NaN")
+primet_229_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2018.csv", na.strings="NaN")
+primet_229_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2019.csv", na.strings="NaN")
+primet_229_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2020.csv", na.strings="NaN")
+primet_229_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2021.csv", na.strings="NaN")
+primet_229_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2022.csv", na.strings="NaN")
+primet_229_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_229_a_5min_2023.csv", na.strings="NaN")
+
+#Combining into one dataframe (bind_rows because col names change in 2019)
+P229Along <- bind_rows(
+  primet_229_a_5min_2014,
+  primet_229_a_5min_2015,
+  primet_229_a_5min_2016,
+  primet_229_a_5min_2017,
+  primet_229_a_5min_2018,
+  primet_229_a_5min_2019,
+  primet_229_a_5min_2020,
+  primet_229_a_5min_2021,
+  primet_229_a_5min_2022,
+  primet_229_a_5min_2023)
+```
+
+
+#Reading in/combining P229B
+```{r}
+primet_229_b_5min_2014 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2014.csv", na.strings="NaN")
+primet_229_b_5min_2015 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2015.csv", na.strings="NaN")
+primet_229_b_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2016.csv", na.strings="NaN")
+primet_229_b_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2017.csv", na.strings="NaN")
+primet_229_b_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2018.csv", na.strings="NaN")
+primet_229_b_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2019.csv", na.strings="NaN")
+primet_229_b_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2020.csv", na.strings="NaN")
+primet_229_b_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2021.csv", na.strings="NaN")
+primet_229_b_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2022.csv", na.strings="NaN")
+primet_229_b_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_229_b_5min_2023.csv", na.strings="NaN")
+
+#Combining into one dataframe)
+P229Blong <- bind_rows(
+  primet_229_b_5min_2014,
+  primet_229_b_5min_2015,
+  primet_229_b_5min_2016,
+  primet_229_b_5min_2017,
+  primet_229_b_5min_2018,
+  primet_229_b_5min_2019,
+  primet_229_b_5min_2020,
+  primet_229_b_5min_2021,
+  primet_229_b_5min_2022,
+  primet_229_b_5min_2023)
+```
+
+
+#Reading in/combining P230 
+(precip and SWC/Stemp) after manual formatting row names in Excel (removing units and putting row names at very top; formatting date to yyyy-mm-dd hh:mm:ss)
+```{r}
+primet_230_a_5min_2014 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2014.csv", na.strings="NaN")
+primet_230_a_5min_2015 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2015.csv", na.strings="NaN")
+primet_230_a_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2016.csv", na.strings="NaN")
+primet_230_a_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2017.csv", na.strings="NaN")
+primet_230_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2018.csv", na.strings="NaN")
+primet_230_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2019.csv", na.strings="NaN")
+primet_230_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2020.csv", na.strings="NaN")
+primet_230_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2021.csv", na.strings="NaN")
+primet_230_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2022.csv", na.strings="NaN")
+primet_230_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2023.csv", na.strings="NaN")
+primet_230_a_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2024.csv", na.strings="NaN")
+
+
+#Combining into one dataframe - issue with combining logical and character vectors
+primet_230_a_5min_2014Ch <- primet_230_a_5min_2014 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2015Ch <- primet_230_a_5min_2015 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2016Ch <- primet_230_a_5min_2016 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2017Ch <- primet_230_a_5min_2017 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2018Ch <- primet_230_a_5min_2018 |> mutate(across(where(is.logical), as.character)) |> mutate(SOLAR_MAX_100_0_01 = as.character(SOLAR_MAX_100_0_01))
+primet_230_a_5min_2019Ch <- primet_230_a_5min_2019 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2020Ch <- primet_230_a_5min_2020 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2021Ch <- primet_230_a_5min_2021 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2022Ch <- primet_230_a_5min_2022 |> mutate(across(where(is.logical), as.character))
+primet_230_a_5min_2023Ch <- primet_230_a_5min_2023 |> mutate(across(where(is.logical), as.character))|> mutate(SWC_MEAN_0_20_02 = as.numeric(SWC_MEAN_0_20_02)) |> mutate(SWE_CHECK=as.character(SWE_CHECK))
+primet_230_a_5min_2024Ch <- primet_230_a_5min_2024 |> mutate(across(where(is.logical), as.character))|> mutate(SWC_MEAN_0_20_02 = as.numeric(SWC_MEAN_0_20_02)) |> mutate(SWE_CHECK=as.character(SWE_CHECK))
+
+
+# Now use bind_rows
+P230long <- bind_rows(
+  primet_230_a_5min_2014Ch,
+  primet_230_a_5min_2015Ch,
+  primet_230_a_5min_2016Ch,
+  primet_230_a_5min_2017Ch,
+  primet_230_a_5min_2018Ch,
+  primet_230_a_5min_2019Ch,
+  primet_230_a_5min_2020Ch,
+  primet_230_a_5min_2021Ch,
+  primet_230_a_5min_2022Ch,
+  primet_230_a_5min_2023Ch,
+  primet_230_a_5min_2024Ch)
+```
+
+#Reading in/combining P229B
+```{r}
+primet_239_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_239_a_5min_2023.csv", na.strings="NaN")|>mutate(BATTERY_V_CHECK=as.character(BATTERY_V_CHECK))
+primet_239_a_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/primet_239_a_5min_2024.csv", na.strings="NaN")|>mutate(BATTERY_V_CHECK=as.character(BATTERY_V_CHECK))
+
+
+#Combining into one dataframe)
+P239Along <- bind_rows(
+primet_239_a_5min_2023,
+primet_239_a_5min_2024)
+```
+
+#Combining all Primet files
+```{r}
+Primet2014_2024<-bind_rows(
+P226long,
+P229Along,
+P229Blong,
+P230long,
+P239Along)
+```
+
+#Reading in/combining D420A
+```{r}
+dscmet_420_a_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2016.csv", na.strings="NaN")
+dscmet_420_a_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2017.csv", na.strings="NaN")
+dscmet_420_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2018.csv", na.strings="NaN")
+dscmet_420_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2019.csv", na.strings="NaN")
+dscmet_420_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2020.csv", na.strings="NaN")
+dscmet_420_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2021.csv", na.strings="NaN")
+dscmet_420_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2022.csv", na.strings="NaN")
+dscmet_420_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2023.csv", na.strings="NaN")
+dscmet_420_a_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_a_5min_2024.csv", na.strings="NaN")
+
+#Combining into one dataframe
+D420Along <- bind_rows(
+  dscmet_420_a_5min_2016,
+  dscmet_420_a_5min_2017,
+  dscmet_420_a_5min_2018,
+  dscmet_420_a_5min_2019,
+  dscmet_420_a_5min_2020,
+  dscmet_420_a_5min_2021,
+  dscmet_420_a_5min_2022,
+  dscmet_420_a_5min_2023,
+  dscmet_420_a_5min_2024)
+```
+
+#Reading in/combining D420B
+```{r}
+dscmet_420_b_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2017.csv", na.strings="NaN")
+dscmet_420_b_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2018.csv", na.strings="NaN")
+dscmet_420_b_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2019.csv", na.strings="NaN")
+dscmet_420_b_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2020.csv", na.strings="NaN")
+dscmet_420_b_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2021.csv", na.strings="NaN")
+dscmet_420_b_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2022.csv", na.strings="NaN")
+dscmet_420_b_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2023.csv", na.strings="NaN")
+dscmet_420_b_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/dscmet_420_b_5min_2024.csv", na.strings="NaN")
+
+#Combining into one dataframe
+D420Blong <- bind_rows(
+  dscmet_420_b_5min_2017,
+  dscmet_420_b_5min_2018,
+  dscmet_420_b_5min_2019,
+  dscmet_420_b_5min_2020,
+  dscmet_420_b_5min_2021,
+  dscmet_420_b_5min_2022,
+  dscmet_420_b_5min_2023,
+  dscmet_420_b_5min_2024)
+```
+
+
+#Reading in/combining D421A
+```{r}
+dscmet_421_a_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2016.csv", na.strings="NaN")
+dscmet_421_a_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2017.csv", na.strings="NaN")
+dscmet_421_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2018.csv", na.strings="NaN")
+dscmet_421_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2019.csv", na.strings="NaN")
+dscmet_421_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2020.csv", na.strings="NaN")
+dscmet_421_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2021.csv", na.strings="NaN")
+dscmet_421_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2022.csv", na.strings="NaN")
+dscmet_421_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2023.csv", na.strings="NaN")
+dscmet_421_a_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_a_5min_2024.csv", na.strings="NaN")
+
+#Combining into one dataframe
+D421Along <- bind_rows(
+  dscmet_421_a_5min_2016,
+  dscmet_421_a_5min_2017,
+  dscmet_421_a_5min_2018,
+  dscmet_421_a_5min_2019,
+  dscmet_421_a_5min_2020,
+  dscmet_421_a_5min_2021,
+  dscmet_421_a_5min_2022,
+  dscmet_421_a_5min_2023,
+  dscmet_421_a_5min_2024)
+```
+
+#Reading in/combining D421B
+```{r}
+dscmet_421_b_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2017.csv", na.strings="NaN")
+dscmet_421_b_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2018.csv", na.strings="NaN")
+dscmet_421_b_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2019.csv", na.strings="NaN")
+dscmet_421_b_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2020.csv", na.strings="NaN")
+dscmet_421_b_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2021.csv", na.strings="NaN")
+dscmet_421_b_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2022.csv", na.strings="NaN")
+dscmet_421_b_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2023.csv", na.strings="NaN")
+dscmet_421_b_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/dscmet_421_b_5min_2024.csv", na.strings="NaN")
+
+#Combining into one dataframe
+D421Blong <- bind_rows(
+  dscmet_421_b_5min_2017,
+  dscmet_421_b_5min_2018,
+  dscmet_421_b_5min_2019,
+  dscmet_421_b_5min_2020,
+  dscmet_421_b_5min_2021,
+  dscmet_421_b_5min_2022,
+  dscmet_421_b_5min_2023,
+  dscmet_421_b_5min_2024)
+```
+
+
+#Reading in/combining D422A
+```{r}
+dscmet_422_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2018.csv", na.strings="NaN")
+dscmet_422_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2019.csv", na.strings="NaN")
+dscmet_422_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2020.csv", na.strings="NaN")
+dscmet_422_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2021.csv", na.strings="NaN")
+dscmet_422_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2022.csv", na.strings="NaN")
+dscmet_422_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2023.csv", na.strings="NaN")
+dscmet_422_a_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/dscmet_422_a_5min_2024.csv", na.strings="NaN")
+
+#Combining into one dataframe
+D422Along <- bind_rows(
+  dscmet_422_a_5min_2018,
+  dscmet_422_a_5min_2019,
+  dscmet_422_a_5min_2020,
+  dscmet_422_a_5min_2021,
+  dscmet_422_a_5min_2022,
+  dscmet_422_a_5min_2023,
+  dscmet_422_a_5min_2024)
+```
+
+
+#Combining all DSCMet files
+```{r}
+Dscmet2016_2024<-bind_rows(
+D420Along,
+D420Blong,
+D421Along,
+D421Blong,
+D422Along)
+```
+
+#Saving these raw combined files
+```{r}
+save(Primet2014_2024, file = "Primet2014_2024.RData")
+save(Dscmet2016_2024, file = "Dscmet2016_2024.RData")
+```
+
+
+##Fixing Primet flag issues and getting time is POSIXct
+```{r}
+#Filling blank cells with NA
+Primet2014_2024_filled <- Primet2014_2024 |>
+  mutate(across(everything(), ~ ifelse(. == '', NA, .)))
+
+# Identifying each unique flag type
+unique_Pstrings <- unique(unlist(sapply(Primet2014_2024_filled, function(x) x[is.character(x)])))
+
+#Finding where in the dataframes problem flags come in so we can fix their corresponding values 
+values_to_remove <- c("M", "I")
+
+# Filter data frame
+filtered_Primet2014_2024_filled <- Primet2014_2024_filled[!rowSums(sapply(Primet2014_2024_filled, function(x) x %in% values_to_remove | is.na(x))) > 0, ]
+
+
+#Filtering flags after searching in R environment object where flags show up 
+Primet2014_2024_sorted_filled$SWC_MEAN_0_100_04[P230long_filled$Flag_SWC_MEAN_0_100_04=="Q"] <- NA
+
+
+#Now that this takes care of the flags, we can do some formatting, separate objects and leave out flags
+Primet2014_2024_filled_sorted <- Primet2014_2024_filled |> arrange(Date)
+Primet2014_2024_filled_sorted$ts<-as.POSIXct(Primet2014_2024_filled_sorted$Date,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+Primet2014_2024_filled_sorted$yr <- format(Primet2014_2024_filled_sorted$ts, "%Y")
+#Re-adjusting formats and getting water year values
+Primet2014_2024_filled_sorted$yr<-format(Primet2014_2024_filled_sorted$ts, "%Y")
+Primet2014_2024_filled_sorted$day<-format(Primet2014_2024_filled_sorted$ts, "%Y-%m-%d")
+Primet2014_2024_filled_sorted$DOY<-yday(Primet2014_2024_filled_sorted$ts)
+
+Primet2014_2024_filled_sorted$DOWY<-sapply(Primet2014_2024_filled_sorted$day, DOY_water_year)
+Primet2014_2024_filled_sorted$Wyr<-sapply(Primet2014_2024_filled_sorted$day, water_year)
+```
+
+
+##Fixing Primet flag issues and getting time is POSIXct
+
+
+
+
+
+
+
+
+
+
+#Reading in DSCMET data and renaming / re-formatting (2016-2024)
+```{r}
+DSCmetClimateData31aug24 <- read.csv("C:/Users/Gabby/Downloads/Climate data 2016-2024 31aug24.csv", na.strings="NaN", stringsAsFactors=TRUE)
+
+#we see that there is one Q that shows up the "flag4" set at 3/4/2019 8:40. Let's find it in the original DF and change it to NA to be safe
+
+DSCmetClimateData31aug24[271689,"SWC_04"]<-NA
+
+
+#Manual filtering in Excel shows us that there are no flags other than "M" for each DSCMet soil temp
+
+#Formatting and reducing time (VPD and Temp are done separately below with a similar format)
+DSCmetClimateData31aug24$ts<-as.POSIXct(DSCmetClimateData31aug24$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+
+#Separating objects 
+DSCmetClimateData31aug24$SOILTEMP_MEAN_0_10_01D<-DSCmetClimateData31aug24$SOILTEMP_MEAN_0_10_01
+DSCmet_ST <- DSCmetClimateData31aug24 |> select(c(ts,SOILTEMP_MEAN_0_10_01D,SOILTEMP_MEAN_0_20_01,SOILTEMP_MEAN_0_50_01,SOILTEMP_MEAN_0_100_01))
+DSCmet_SWC<-DSCmetClimateData31aug24|>select(c(ts,SWC_01,SWC_02,SWC_03,SWC_04))
+```
+
+P230_ST <- P230long_filled |> select(
+  c(ts,yr,SOILTEMP_MEAN_0_10_01,SOILTEMP_MEAN_0_20_02,SOILTEMP_MEAN_0_50_03,SOILTEMP_MEAN_0_100_04))
+P230_SWC <- P230long_filled |> select(
+  c(ts,yr,SWC_MEAN_0_10_01,SWC_MEAN_0_20_02,SWC_MEAN_0_50_03,SWC_MEAN_0_100_04)) 
+
+#Search for versions of I and Q flags in the dataframe using the search function. After finding which versions of flags there are, let's take them out, for example P226long_filled$SWC_MEAN_0_100_04[P230long_filled$Flag_SWC_MEAN_0_100_04=="Q"] <- NA
+
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="CQQ"] <- NA
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="Q"] <- NA
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="QQ"] <- NA
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="QQVQQ"] <- NA
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="QV"] <- NA
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="QVCQQ"] <- NA
+P226long_filled$AIRTEMP_MEAN_450_0_01[P226long_filled$Flag_AIRTEMP_MEAN_450_0_01=="QVQQ"] <- NA
+
+
+#Now that this takes care of the flags, we can do some formatting, separate objects and leave out flags
+P226long_filled$ts<-as.POSIXct(P226long_filled$Date,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+P226long_filled$yr <- format(P226long_filled$ts, "%Y")
+```
+
+
+#Combining Primet and DSCMet
+```{r}
+AirTemp_combined <- full_join(P226long_filled,DSCmetClimateData31aug24,by="ts")
+
+AirTemp_combined$temp_combined <- ifelse(is.na(AirTemp_combined$airtemp_56m_degC_dscmet_421), AirTemp_combined$AIRTEMP_MEAN_450_0_01,AirTemp_combined$airtemp_56m_degC_dscmet_421)
+AirTemp_combined$primet226temp_45dm<-AirTemp_combined$AIRTEMP_MEAN_450_0_01
+AirTemp_combined$dscmet421temp_56m<-AirTemp_combined$airtemp_56m_degC_dscmet_421
+
+AirTemp_combined<-AirTemp_combined|>select(c(ts,primet226temp_45dm,dscmet421temp_56m))
+#Re-adjusting formats and getting water year values
+AirTemp_combined$yr<-format(AirTemp_combined$ts, "%Y")
+AirTemp_combined$day<-format(AirTemp_combined$ts, "%Y-%m-%d")
+AirTemp_combined$DOY<-yday(AirTemp_combined$ts)
+
+AirTemp_combined$DOWY<-sapply(AirTemp_combined$day, DOY_water_year)
+AirTemp_combined$Wyr<-sapply(AirTemp_combined$day, water_year)
+```
+#Saving the above as an .rdata file
+```{r}
+save(AirTemp_combined, file = "AirTemp_combined_DSCandPRIMET_2014-2024.RData")
+save(AirTemp_combined, file = "AirTemp_combined_DSCandPRIMET_2014-2024.csv")
+```
+
+#Var1: ST
+```{r}
+#Combining DSCmet and Primet ST objects and reducing to hourly timestamps / averages (needed so DOWY gives integers)
+ST_combined <- full_join(P230_ST,DSCmet_ST,by="ts") 
+ST_combined$ts<-ST_combined$ts
+            
+#Getting averages per dataframe (takes a long time, like an hour)
+ST_combined_means <-  ST_combined |>  rowwise() |>
+  mutate(
+    meanP_top = mean(c_across(SOILTEMP_MEAN_0_10_01:SOILTEMP_MEAN_0_20_02), na.rm = TRUE),
+    meanP_bot = mean(c_across(SOILTEMP_MEAN_0_50_03:SOILTEMP_MEAN_0_100_04), na.rm = TRUE),
+    meanD_top = mean(c_across(SOILTEMP_MEAN_0_10_01D:SOILTEMP_MEAN_0_20_01), na.rm = TRUE),
+    meanD_bot = mean(c_across(SOILTEMP_MEAN_0_50_01:SOILTEMP_MEAN_0_100_01), na.rm = TRUE))
+
+#Re-adjusting formats and getting water year values
+ST_combined_means$yr<-format(ST_combined_means$ts, "%Y")
+ST_combined_means$day<-format(ST_combined_means$ts, "%Y-%m-%d")
+
+ST_combined_means$DOWY<-sapply(ST_combined_means$day, DOY_water_year)
+ST_combined_means$Wyr<-sapply(ST_combined_means$day, water_year)
+```
+
+##Graphing ST
+```{r}
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "olivedrab1",  "2020" = "darkgreen", "2021" = "turquoise", "2022" = "blue", "2023" = "purple", "2024" = "plum1")
+
+#PRIMET ggplot
+ggplot(ST_combined_means,aes(x=DOWY,y=meanP_top,color=factor(Wyr)))+
+  geom_point(size=1,alpha=0.5)+
+  labs(title="HJA Mean Soil Temp PRIMET (top 50 cm)",x="DOY (Water year scale)",y="Mean Soil Temperature (Deg.C)",color="Legend") +   
+  scale_color_manual(values = custom_colors) + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  scale_x_continuous(
+    limits=c(1,366),breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366), 
+    labels = c(1,32,62,93,124,152,183,213,244,268,305,336,366),sec.axis = sec_axis(
+      trans = ~ .,  # Identity transformation
+      name = "Months",
+      breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+      labels = c("Oct 1","Nov 1","Dec 1","Jan 1","Feb 1","Mar 1","Apr 1","May 1","Jun 1","Jun 25","Aug 1","Sep 1","Sep 30")
+    ))+ 
+  scale_y_continuous(
+    limits = c(0,25),breaks=c(0,5,10,15,20,25),
+    labels =c(0,5,10,15,20,25))
+
+ggplot(ST_combined_means,aes(x=DOWY,y=meanP_bot,color=factor(Wyr)))+
+  geom_point(size=1,alpha=0.5)+
+  labs(title="HJA Mean Soil Temp PRIMET (bottom 50 cm)",x="DOY (Water year scale)",y="Mean Soil Temperature (Deg.C)",color="Legend") +   
+  scale_color_manual(values = custom_colors) + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  scale_x_continuous(
+    limits=c(1,366),breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366), 
+    labels = c(1,32,62,93,124,152,183,213,244,268,305,336,366),sec.axis = sec_axis(
+      trans = ~ .,  # Identity transformation
+      name = "Months",
+      breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+      labels = c("Oct 1","Nov 1","Dec 1","Jan 1","Feb 1","Mar 1","Apr 1","May 1","Jun 1","Jun 25","Aug 1","Sep 1","Sep 30")
+    ))+ 
+  scale_y_continuous(
+    limits = c(0,25),breaks=c(0,5,10,15,20,25),
+    labels =c(0,5,10,15,20,25))
+
+
+#DSCMET ggplot
+ggplot(ST_combined_means ,aes(x=DOWY,y=meanD_top,color=factor(Wyr)))+
+  geom_point(size=1,alpha=0.5)+
+  labs(title="HJA Mean Soil Temp DSCMET (top 50 cm)",x="DOY (Water year scale)",y="Mean Soil Temperature (Deg.C)",color="Legend") +   
+  scale_color_manual(values = custom_colors) + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  scale_x_continuous(
+    limits=c(1,366),breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+    labels = c(1,32,62,93,124,152,183,213,244,268,305,336,366),sec.axis = sec_axis(
+      trans = ~ .,  # Identity transformation
+      name = "Months",
+      breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+      labels = c("Oct 1","Nov 1","Dec 1","Jan 1","Feb 1","Mar 1","Apr 1","May 1","Jun 1","Jun 25","Aug 1","Sep 1","Sep 30")
+ ))+ 
+  scale_y_continuous(
+    limits = c(0,20),breaks=c(0,5,10,15,20),
+    labels =c(0,5,10,15,20))
+
+ggplot(ST_combined_means ,aes(x=DOWY,y=meanD_bot,color=factor(Wyr)))+
+  geom_point(size=1,alpha=0.5)+
+  labs(title="HJA Mean Soil Temp DSCMET (bottom 50 cm)",x="DOY (Water year scale)",y="Mean Soil Temperature (Deg.C)",color="Legend") +   
+  scale_color_manual(values = custom_colors) + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  scale_x_continuous(
+    limits=c(1,366),breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+    labels = c(1,32,62,93,124,152,183,213,244,268,305,336,366),sec.axis = sec_axis(
+      trans = ~ .,  # Identity transformation
+      name = "Months",
+      breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+      labels = c("Oct 1","Nov 1","Dec 1","Jan 1","Feb 1","Mar 1","Apr 1","May 1","Jun 1","Jun 25","Aug 1","Sep 1","Sep 30")
+ ))+ 
+  scale_y_continuous(
+    limits = c(0,20),breaks=c(0,5,10,15,20),
+    labels =c(0,5,10,15,20))
+```
+## ST HD
+```{r}
+ST_combined_HD<-ST_combined_means|>filter(Wyr=="2021")
+
+#DSCMET ggplot
+ggplot(ST_combined_HD ,aes(x=DOWY,y=meanD))+
+  geom_point(size=1,alpha=0.5)+
+  labs(title="DSCMET Mean Soil Temp During 2021 Heat Dome",x="DOY 2021 (water year scale)",y="Mean Soil Temperature (Deg.C)",color="Legend") + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  scale_x_continuous(
+    limits=c(1,365),breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+    labels = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+    sec.axis = sec_axis(
+      trans = ~ .,  # Identity transformation
+      name = "Months",
+      breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+      labels = c("Oct 1","Nov 1","Dec 1","Jan 1","Feb 1","Mar 1","Apr 1","May 1","Jun 1","Jun 25","Aug 1","Sep 1","Sep 30")))+ 
+  scale_y_continuous(
+    limits = c(0,20),breaks=c(0,5,10,15,20),
+    labels =c(0,5,10,15,20))
+
+
+
+#PRIMET ggplot
+ggplot(ST_combined_HD ,aes(x=DOWY,y=meanP))+
+  geom_point(size=1,alpha=0.5)+
+  labs(title="PRIMET Mean Soil Temp During 2021 Heat Dome",x="DOY 2021 (water year scale)",y="Mean Soil Temperature (Deg.C)",color="Legend") + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  scale_x_continuous(
+    limits=c(1,365),breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+    labels = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+    sec.axis = sec_axis(
+      trans = ~ .,  # Identity transformation
+      name = "Months",
+      breaks = c(1,32,62,93,124,152,183,213,244,268,305,336,366),
+      labels = c("Oct 1","Nov 1","Dec 1","Jan 1","Feb 1","Mar 1","Apr 1","May 1","Jun 1","Jun 25","Aug 1","Sep 1","Sep 30")))+ 
+  scale_y_continuous(
+    limits = c(0,25),breaks=c(0,5,10,15,20,25),
+    labels =c(0,5,10,15,20,25))
+```
+
+#Var2: SWC
+```{r}
+#Combining DSCmet and Primet ST objects (so functions only need to be applied once) and reducing to hourly timestamps / averages (needed so DOWY gives integers)
+SWC_combined <- full_join(P230_SWC,DSCmet_SWC,by="ts") 
+SWC_combined$ts<-SWC_combined$ts
+
+#Re-adjusting formats and getting water year values
+SWC_combined$yr<-format(SWC_combined$ts, "%Y")
+SWC_combined$day<-format(SWC_combined$ts, "%Y-%m-%d")
+
+SWC_combined$DOWY<-sapply(SWC_combined$day, DOY_water_year) #(Note: takes a while)
+SWC_combined$Wyr<-sapply(SWC_combined$day, water_year)
+
+
+
+```
+
+##Normalizing SWC
+```{r}
+#First, find the max values for each year
+WYR14<-SWC_combined|>filter(Wyr=="2014")
+WYR15<-SWC_combined|>filter(Wyr=="2015")
+WYR16<-SWC_combined|>filter(Wyr=="2016")
+WYR17<-SWC_combined|>filter(Wyr=="2017")
+WYR18<-SWC_combined|>filter(Wyr=="2018")
+WYR19<-SWC_combined|>filter(Wyr=="2019")
+WYR20<-SWC_combined|>filter(Wyr=="2020")
+WYR21<-SWC_combined|>filter(Wyr=="2021")
+WYR22<-SWC_combined|>filter(Wyr=="2022")
+WYR23<-SWC_combined|>filter(Wyr=="2023")
+WYR24<-SWC_combined|>filter(Wyr=="2024")
+
+
+#Format with three columns
+SWC_combined_long <- SWC_combined |>
+  pivot_longer(
+    cols = starts_with("SWC_"),
+    names_to = "Sensor_depth",  
+    values_to = "value")  
+
+#Next, group by depth and year to normalize each section
+#Primet
+
+#Depth 10
+SWC10_14P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2014")|>mutate(norm10_14P=value/0.316)|>select(c(day,DOWY,Wyr,norm10_14P))
+
+SWC10_15P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2015")|>mutate(norm10_15P=value/0.63)|>select(c(day,DOWY,Wyr,norm10_15P))
+
+SWC10_16P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2016")|>mutate(norm10_16P=value/0.641)|>select(c(day,DOWY,Wyr,norm10_16P))
+
+SWC10_17P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2017")|>mutate(norm10_17P=value/0.496)|>select(c(day,DOWY,Wyr,norm10_17P))
+
+SWC10_18P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2018")|>mutate(norm10_18P=value/0.327)|>select(c(day,DOWY,Wyr,norm10_18P))
+
+SWC10_19P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2019")|>mutate(norm10_19P=value/0.557)|>select(c(day,DOWY,Wyr,norm10_19P))
+
+SWC10_20P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2020")|>mutate(norm10_20P=value/0.338)|>select(c(day,DOWY,Wyr,norm10_20P))
+
+SWC10_21P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2021")|>mutate(norm10_21P=value/0.329)|>select(c(day,DOWY,Wyr,norm10_21P))
+
+SWC10_22P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2022")|>mutate(norm10_22P=value/0.326)|>select(c(day,DOWY,Wyr,norm10_22P))
+
+SWC10_23P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2023")|>mutate(norm10_23P=value/0.325)|>select(c(day,DOWY,Wyr,norm10_23P))
+
+
+
+#Depth 20
+SWC20_14P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2014")|>mutate(norm20_14P=value/0.262)|>select(c(day,DOWY,Wyr,norm20_14P))
+
+SWC20_15P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2015")|>mutate(norm20_15P=value/0.694)|>select(c(day,DOWY,Wyr,norm20_15P))
+
+SWC20_16P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2016")|>mutate(norm20_16P=value/0.7)|>select(c(day,DOWY,Wyr,norm20_16P))
+
+SWC20_17P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2017")|>mutate(norm20_17P=value/0.714)|>select(c(day,DOWY,Wyr,norm20_17P))
+
+SWC20_18P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2018")|>mutate(norm20_18P=value/0.326)|>select(c(day,DOWY,Wyr,norm20_18P))
+
+SWC20_19P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2019")|>mutate(norm20_19P=value/0.703)|>select(c(day,DOWY,Wyr,norm20_19P))
+
+SWC20_20P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2020")|>mutate(norm20_20P=value/0.715)|>select(c(day,DOWY,Wyr,norm20_20P))
+
+SWC20_21P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2021")|>mutate(norm20_21P=value/0.694)|>select(c(day,DOWY,Wyr,norm20_21P))
+
+SWC20_22P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2022")|>mutate(norm20_22P=value/0.711)|>select(c(day,DOWY,Wyr,norm20_22P))
+
+SWC20_23P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2023")|>mutate(norm20_23P=value/1)|>select(c(day,DOWY,Wyr,norm20_23P))
+
+
+#Depth 50
+SWC50_14P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2014")|>mutate(norm50_14P=value/0.267)|>select(c(day,DOWY,Wyr,norm50_14P))
+
+SWC50_15P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2015")|>mutate(norm50_15P=value/0.656)|>select(c(day,DOWY,Wyr,norm50_15P))
+
+SWC50_16P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2016")|>mutate(norm50_16P=value/0.674)|>select(c(day,DOWY,Wyr,norm50_16P))
+
+SWC50_17P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2017")|>mutate(norm50_17P=value/0.668)|>select(c(day,DOWY,Wyr,norm50_17P))
+
+SWC50_18P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2018")|>mutate(norm50_18P=value/0.651)|>select(c(day,DOWY,Wyr,norm50_18P))
+
+SWC50_19P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2019")|>mutate(norm50_19P=value/0.652)|>select(c(day,DOWY,Wyr,norm50_19P))
+
+SWC50_20P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2020")|>mutate(norm50_20P=value/0.676)|>select(c(day,DOWY,Wyr,norm50_20P))
+
+SWC50_21P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2021")|>mutate(norm50_21P=value/0.685)|>select(c(day,DOWY,Wyr,norm50_21P))
+
+SWC50_22P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2022")|>mutate(norm50_22P=value/0.675)|>select(c(day,DOWY,Wyr,norm50_22P))
+
+SWC50_23P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2023")|>mutate(norm50_23P=value/0.669)|>select(c(day,DOWY,Wyr,norm50_23P))
+
+#SWC50_24 <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2024")|>mutate(norm50_24=value/0.5)|>select(c(day,DOWY,Wyr,norm50_24))
+
+
+#Depth 100
+SWC100_14P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2014")|>mutate(norm100_14P=value/0.34)|>select(c(day,DOWY,Wyr,norm100_14P))
+
+SWC100_15P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2015")|>mutate(norm100_15P=value/0.5)|>select(c(day,DOWY,Wyr,norm100_15P))
+
+SWC100_16P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2016")|>mutate(norm100_16P=value/0.5)|>select(c(day,DOWY,Wyr,norm100_16P))
+
+SWC100_17P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2017")|>mutate(norm100_17P=value/0.5)|>select(c(day,DOWY,Wyr,norm100_17P))
+
+SWC100_18P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2018")|>mutate(norm100_18P=value/0.5)|>select(c(day,DOWY,Wyr,norm100_18P))
+
+SWC100_19P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2019")|>mutate(norm100_19P=value/0.744)|>select(c(day,DOWY,Wyr,norm100_19P))
+
+SWC100_20P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2020")|>mutate(norm100_20P=value/0.755)|>select(c(day,DOWY,Wyr,norm100_20P))
+
+SWC100_21P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2021")|>mutate(norm100_21P=value/0.774)|>select(c(day,DOWY,Wyr,norm100_21P))
+
+SWC100_22P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2022")|>mutate(norm100_22P=value/0.76)|>select(c(day,DOWY,Wyr,norm100_22P))
+
+SWC100_23P <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2023")|>mutate(norm100_23P=value/0.759)|>select(c(day,DOWY,Wyr,norm100_23P))
+
+#SWC100_24 <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2024")|>mutate(norm100_24=value/0.5)|>select(c(day,DOWY,Wyr,norm100_24))
+
+
+
+
+#DSCMET
+
+#Depth 10
+SWC10_17D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2017")|>mutate(norm10_17D=value/0.234)|>select(c(day,DOWY,Wyr,norm10_17D))
+
+SWC10_18D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2018")|>mutate(norm10_18D=value/0.221)|>select(c(day,DOWY,Wyr,norm10_18D))
+
+SWC10_19D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2019")|>mutate(norm10_19D=value/0.229)|>select(c(day,DOWY,Wyr,norm10_19D))
+
+SWC10_20D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2020")|>mutate(norm10_20D=value/0.211)|>select(c(day,DOWY,Wyr,norm10_20D))
+
+SWC10_21D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2021")|>mutate(norm10_21D=value/0.213)|>select(c(day,DOWY,Wyr,norm10_21D))
+
+SWC10_22D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2022")|>mutate(norm10_22D=value/0.237)|>select(c(day,DOWY,Wyr,norm10_22D))
+
+SWC10_23D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_10_01") |> filter(Wyr=="2023")|>mutate(norm10_23D=value/0.227)|>select(c(day,DOWY,Wyr,norm10_23D))
+
+
+
+#Depth 20
+SWC20_17D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2017")|>mutate(norm20_17D=value/0.264)|>select(c(day,DOWY,Wyr,norm20_17D))
+
+SWC20_18D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2018")|>mutate(norm20_18D=value/0.226)|>select(c(day,DOWY,Wyr,norm20_18D))
+
+SWC20_19D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2019")|>mutate(norm20_19D=value/0.234)|>select(c(day,DOWY,Wyr,norm20_19D))
+
+SWC20_20D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2020")|>mutate(norm20_20D=value/0.199)|>select(c(day,DOWY,Wyr,norm20_20D))
+
+SWC20_21D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2021")|>mutate(norm20_21D=value/0.205)|>select(c(day,DOWY,Wyr,norm20_21D))
+
+SWC20_22D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2022")|>mutate(norm20_22D=value/0.225)|>select(c(day,DOWY,Wyr,norm20_22D))
+
+SWC20_23D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_20_02") |> filter(Wyr=="2023")|>mutate(norm20_23D=value/0.210)|>select(c(day,DOWY,Wyr,norm20_23D))
+
+
+#Depth 50
+SWC50_17D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2017")|>mutate(norm50_17D=value/0.253)|>select(c(day,DOWY,Wyr,norm50_17D))
+
+SWC50_18D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2018")|>mutate(norm50_18D=value/0.229)|>select(c(day,DOWY,Wyr,norm50_18D))
+
+SWC50_19D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2019")|>mutate(norm50_19D=value/0.223)|>select(c(day,DOWY,Wyr,norm50_19D))
+
+SWC50_20D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2020")|>mutate(norm50_20D=value/0.208)|>select(c(day,DOWY,Wyr,norm50_20D))
+
+SWC50_21D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2021")|>mutate(norm50_21D=value/0.225)|>select(c(day,DOWY,Wyr,norm50_21D))
+
+SWC50_22D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2022")|>mutate(norm50_22D=value/0.272)|>select(c(day,DOWY,Wyr,norm50_22D))
+
+SWC50_23D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2023")|>mutate(norm50_23D=value/0.23)|>select(c(day,DOWY,Wyr,norm50_23D))
+
+#SWC50_24 <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_50_03") |> filter(Wyr=="2024")|>mutate(norm50_24=value/0.5)|>select(c(day,DOWY,Wyr,norm50_24))
+
+
+#Depth 100
+SWC100_17D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2017")|>mutate(norm100_17D=value/0.413)|>select(c(day,DOWY,Wyr,norm100_17D))
+
+SWC100_18D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2018")|>mutate(norm100_18D=value/0.37)|>select(c(day,DOWY,Wyr,norm100_18D))
+
+SWC100_19D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2019")|>mutate(norm100_19D=value/0.489)|>select(c(day,DOWY,Wyr,norm100_19D))
+
+SWC100_20D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2020")|>mutate(norm100_20D=value/0.363)|>select(c(day,DOWY,Wyr,norm100_20D))
+
+SWC100_21D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2021")|>mutate(norm100_21D=value/0.428)|>select(c(day,DOWY,Wyr,norm100_21D))
+
+SWC100_22D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2022")|>mutate(norm100_22D=value/0.391)|>select(c(day,DOWY,Wyr,norm100_22D))
+
+SWC100_23D <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2023")|>mutate(norm100_23D=value/0.382)|>select(c(day,DOWY,Wyr,norm100_23D))
+
+#SWC100_24 <- SWC_combined_long |> filter(Sensor_depth=="SWC_MEAN_0_100_04") |> filter(Wyr=="2024")|>mutate(norm100_24=value/0.5)|>select(c(day,DOWY,Wyr,norm100_24))
+```
+
+
+#Combining SWC after getting normalized values
+
+```{r}
+SWC_norms_list<-list(SWC10_14P,SWC10_15P,SWC10_16P,SWC10_17P,SWC10_18P,SWC10_19P,SWC10_20P,SWC10_21P,
+SWC10_22P,SWC10_23P,SWC20_14P,SWC20_15P,SWC20_16P,SWC20_17P,SWC20_18P,SWC20_19P,SWC20_20P,SWC20_21P,SWC20_22P,SWC20_23P,SWC50_14P,SWC50_15P,SWC50_16P,SWC50_17P,SWC50_18P,SWC50_19P,SWC50_20P,SWC50_21P,SWC50_22P,SWC50_23P,SWC100_14P,SWC100_15P,SWC100_16P,SWC100_17P,SWC100_18P,SWC100_19P,SWC100_20P,SWC100_21P,SWC100_22P,SWC100_23P,
+SWC10_17D,SWC10_18D,SWC10_19D,SWC10_20D,SWC10_21D,SWC10_22D,SWC10_23D,SWC20_17D,SWC20_18D,SWC20_19D,SWC20_20D,SWC20_21D,SWC20_22D,SWC20_23D,SWC50_17D,SWC50_18D,SWC50_19D,SWC50_20D,SWC50_21D,SWC50_22D,SWC50_23D,SWC100_17D,SWC100_18D,SWC100_19D,SWC100_20D,SWC100_21D,SWC100_22D,SWC100_23D)
+
+SWC_norms<- purrr::reduce(SWC_norms_list,full_join, by = "Date")
+
+SWC_norms_10_long<-SWC_norms|>pivot_longer(
+    cols = starts_with("norm10_"),
+    names_to = "sensor1",
+    values_to = "norm10")|>select(c(Date,norm10))|>filter(!is.na(norm10))
+
+SWC_norms_20_long<-SWC_norms|>pivot_longer(
+    cols = starts_with("norm20_"),
+    names_to = "sensor20",
+    values_to = "norm20")|>select(c(Date,norm20))|>filter(!is.na(norm20))
+
+SWC_norms_50_long<-SWC_norms|>pivot_longer(
+    cols = starts_with("norm50_"),
+    names_to = "sensor50",
+    values_to = "norm50")|>select(c(Date,norm50))|>filter(!is.na(norm50))
+
+SWC_norms_100_long<-SWC_norms|>pivot_longer(
+    cols = starts_with("norm100_"),
+    names_to = "sensor100",
+    values_to = "norm100")|>select(c(Date,norm100))|>filter(!is.na(norm100))
+
+SWC_norms_pivoted_list<-list(SWC_norms_10_long,SWC_norms_20_long,SWC_norms_50_long,SWC_norms_100_long)
+SWC_norms_pivoted<- purrr::reduce(SWC_norms_pivoted_list,full_join, by = "Date")|>rowwise() |>
+  mutate(mean_norms = mean(c_across(norm10:norm100), na.rm = TRUE)) 
+```
+
+#Combining norm and non-norm SWC for water year conversion and graphing  
+```{r}
+SWC_mean_norm<-SWC_norms_pivoted|>select(c(Date,mean_norms))
+SWC_mean_norm$Date<-as.POSIXct(SWC_mean_norm$Date,format="%Y-%m-%d %H:%M:%S")
+SWC_mean_norm$day<-format(SWC_mean_norm$Date,"%Y-%m-%d")
+
+Davg_SWC_mean_norm<- SWC_mean_norm|> group_by(day) |> summarise(DAvg_SWC_norms = mean(mean_norms, na.rm = TRUE))
+
+SWC_mean<-SWC_combined4_mean|>select(c(Date,mean))
+SWC_mean$Date<-as.POSIXct(SWC_mean$Date,format="%Y-%m-%d %H:%M:%S")
+SWC_mean$day<-format(SWC_mean$Date,"%Y-%m-%d")
+Davg_SWC_mean<- SWC_mean|> group_by(day) |> summarise(DAvg_SWC = mean(mean, na.rm = TRUE))
+
+SWC_norm_and_original <- full_join(Davg_SWC_mean_norm,Davg_SWC_mean,by="day")
+SWC_norm_and_original$DOWY<-sapply(SWC_norm_and_original$day, DOY_water_year)
+SWC_norm_and_original$Wyr<-sapply(SWC_norm_and_original$day, water_year)
+```
+
+
+#Graphing SWC after the data manipulation 
+```{r}
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "olivedrab1",  "2020" = "darkgreen", "2021" = "turquoise", "2022" = "blue", "2023" = "purple", "2024" = "plum1")
+
+#Norm
+SWC_norm_Plot<-
+ggplot(SWC_norm_and_original,aes(x=DOWY,y=DAvg_SWC_norms,color=factor(Wyr)))+
+  geom_point(size=2,alpha=0.75)+
+  labs(title="HJA Normalized Soil Water Content by Water Year (Oct 1-Oct 1); no flags",x="DOY (water year scale)",y="Normalized Soil Water Content Fraction",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+SWC_norm_Plot + scale_x_continuous(limits=c(1,366),breaks = c(1,25,50,75,100,125,150,175,200,225,250,268,300,325,350,366), labels = c(1,25,50,75,100,125,150,175,200,225,250,268,300,325,350,366))+
+scale_y_continuous(limits = c(0,1),breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),labels =c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1))
+
+
+#Non-norm 
+#Norm
+SWC_original_Plot<-
+ggplot(SWC_norm_and_original,aes(x=DOWY,y=DAvg_SWC,color=factor(Wyr)))+
+  geom_point(size=2,alpha=0.75)+
+  labs(title="HJA Soil Water Content by Water Year (Oct 1-Oct 1); no flags",x="DOY (water year scale)",y="Soil Water Content Fraction",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+SWC_original_Plot + scale_x_continuous(limits=c(1,366),breaks = c(1,25,50,75,100,125,150,175,200,225,250,268,300,325,350,366), labels = c(1,25,50,75,100,125,150,175,200,225,250,268,300,325,350,366))+
+scale_y_continuous(limits = c(0,0.5),breaks=c(0,0.1,0.2,0.3,0.4,0.5),labels =c(0,0.1,0.2,0.3,0.4,0.5))
+```
+
+#SWC Heat Dome Zoom-in and Normalization Comparison
+```{r}
+SWC_norm_and_original_HD<-SWC_norm_and_original|>filter(Wyr=="2021")
+  
+SWC_norm_and_original_HD_plot<-ggplot(SWC_norm_and_original_HD,aes(x=DOWY)) + geom_point(aes(y=DAvg_SWC_norms,color="DAvg_SWC_norms")) + geom_point(aes(y=DAvg_SWC,color="DAvg_SWC")) + 
+labs(title="Normalized and Non-normalized SWC During HJA Heat Dome",x="Day of Water Year June-Aug 2021",y="Soil Water Content Fraction")+ guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+SWC_norm_and_original_HD_plot + scale_x_continuous(limits=c(241,335),breaks = c(240,260,268,280,300,320,340),labels = c(240,260,268,280,300,320,340))
+
+#Add vertical dashed line at a specific date
+SWC_norm_and_original_HD_plot +  geom_vline(xintercept = 268, linetype = "dashed", color = "black")+
+ annotate("text",x=268,y=0.5,label="Onset of Heat Dome",color="black")
+#ggplot(SWC_norm_and_original,aes(x=DOWY)) + geom_point(aes(y=StressDegreeHours,color="StressDegreeHours")) +
+```
+
+#Var3: Precip
+```{r}
+#Not plotting well for some reason so I will manually accumulate 
+P230_Pmm_accu100<-P230long_filled|>select(c(Date,PRECIP_ACC_100_0_01,Flag_PRECIP_ACC_100_0_01))
+P230_Pmm_accu100_noflags<-P230_Pmm_accu100|>filter(is.na(Flag_PRECIP_ACC_100_0_01))
+P230_Pmm_accu100_noflags$Date<-as.POSIXct(P230_Pmm_accu100_noflags$Date,format="%Y-%m-%d %H:%M:%S")
+P230_Pmm_accu100_noflags$yr<-format(P230_Pmm_accu100_noflags$Date, "%Y")
+P230_Pmm_accu100_noflags$DOY<-yday(P230_Pmm_accu100_noflags$Date)
+P230_Pmm_accu100_noflags$day<-format(P230_Pmm_accu100_noflags$Date,"%Y-%m-%d")
+
+
+Davg_P230_Pmm_accu100_noflags <- P230_Pmm_accu100_noflags |> group_by(day) |> summarise(
+  Davg = mean(PRECIP_ACC_100_0_01, na.rm = TRUE))
+
+#Appling Water Yr formulas to DFs
+
+Davg_P230_Pmm_accu100_noflags$DOWY<-sapply(Davg_P230_Pmm_accu100_noflags$day, DOY_water_year)
+Davg_P230_Pmm_accu100_noflags$Wyr<-sapply(Davg_P230_Pmm_accu100_noflags$day, water_year)
+```
+
+#Graphing precip post-formula
+```{r}
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "olivedrab1",  "2020" = "darkgreen", "2021" = "turquoise", "2022" = "blue", "2023" = "purple", "2024" = "plum1")
+
+P230PmmPlot<-ggplot(Davg_P230_Pmm_accu100_noflags,aes(x=DOWY,y=Davg,color=factor(Wyr)))+
+  geom_point(size=1,alpha=0.5)+labs(title="HJA Accumulated Precip by Water Year (Oct 1-Oct 1); no flags",x="DOY (water year scale)",y="Accuumulated Precipitation (mm)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+
+P230PmmPlot + scale_x_continuous(limits=c(1,365),breaks = c(1,25,50,75,100,125,150,175,200,225,250,268,300,325,350,366), labels = c(1,25,50,75,100,125,150,175,200,225,250,268,300,325,350,366))+
+  scale_y_continuous(limits = c(0,2700),breaks=c(0,300,600,900,1200,1500,1800,2100,2400,2700),labels =c(0,300,600,900,1200,1500,1800,2100,2400,2700))
+```
+
+
+```{r}
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
+
+
+ggplot(P230_ST_M10_noflags ,aes(x=Date,y=SOILTEMP_MEAN_0_10_01,color=factor(yr)))+
+  geom_point(size=1,alpha=0.5)+labs(title="HJA Mean Soil Temp; no flags",x="Date",y="Mean Soil Temperature (Deg.C)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+ggplot(P230_ST_M10,aes(x=Date,y=SOILTEMP_MEAN_0_10_01,color=factor(yr)))+
+  geom_point(size=1,alpha=0.5)+labs(title="HJA Mean Soil Temp",x="Date",y="Mean Soil Temperature (Deg.C)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+```
+
+
+#Temp v VPD Heat Dome
+```{r}
+#Temps vs VPD
+temp_vpd<-climatedatafull_long|>filter(origin=="soiltemp" | origin=="airtemp" | origin=="VPDkpa")
+temp_vpd$ts<-as.Date(temp_vpd$ts)
+
+tempVvpdPlot<-ggplot(temp_vpd, aes(x = ts, y=value,color = origin)) +
+  geom_point(size=1,alpha=0.25)+
+  labs(title="HJA Temperatures vs. VPD",x="Date",y="Value (Temp in Deg. C; VPD in kpa)",color="Legend")+ guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+specific_date <- as.Date("2021-06-25")
+tempVvpdPlot + geom_vline(xintercept = as.Date(specific_date), linetype = "dashed", color = "black")+ annotate("text",x=specific_date-170,y=-6,label="Onset of Heat Dome",color="black")+theme_minimal()
+
+ggsave("tempVvpd.jpg")
+```
+
+#Heat Dome Moisture
+```{r}
+
+# Zooming in on moisture during Heat Dome
+
+moisture<-climatedatafull_long|>filter(origin=="precip" | origin=="SWCpercent" | origin=="VPDkpa")
+
+moisture$date <- as.Date(moisture$ts)
+
+# Filter data for June 2023 (adjust the month and year as needed)
+target_month <- c(6,7)  # June
+target_year <- 2021
+
+filtered_moisture <- moisture |>
+  filter(month(date) == target_month & year(date) == target_year)
+
+# Example: Create a plot (e.g., line plot of a numeric variable over time)
+library(ggplot2)  # for plotting
+
+moisture_plot<-ggplot(filtered_moisture, aes(x = date, y = value,color=origin)) +
+  geom_point() +
+  labs(title = "HJA Moisture During Heat Dome 2021",
+       x = "Date", y = "Value") +
+  theme_minimal()
+
+# Add vertical dashed line at a specific date
+specific_date <- as.Date("2021-06-25")
+moisture_plot +  geom_vline(xintercept = as.numeric(specific_date), linetype = "dashed", color = "black")+
+  annotate("text",x=specific_date+10,y=7.5,label="Onset of Heat Dome",color="black")
+
+ggsave("moisture2021.jpg")
+```
+
+
+```{r}
+#VPD DOY per year
+
+#First grab years string
+left <- function(string, char){substr(string, 1,char)} 
+years <-left(ClimateDataFull[,"ts"],4)
+#To plot, set number of plots with par()
+par(mfrow=c(1,1))
+#Then set margins 
+par(mar = c(5, 5, 5, 5))
+for(y in 1:length(unique(years))){
+#Now we can select years
+sel<-ClimateDataFull[which(years==unique(years)[y]),]
+#But we need to handle first year first
+if(y==1){
+   plot(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+  as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                  format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                  units = "days"),
+         sel$VPDkpa,
+         ylab="VPD (kpa)",
+         xlab="Day of year",type="l",
+         col=rainbow(length(unique(years)))[y],
+         xlim=c(50,320),
+         ylim=c(3,
+                max(ClimateDataFull$VPDkpa,na.rm=T)),
+         main="HJA VPD Through the Years")
+    
+    legend("topright",
+           as.character(unique(ClimateDataFull$year)),
+           col=rainbow(length(unique(ClimateDataFull$year))),
+           bty="n",pch=16,ncol = 2,cex=0.75)
+# Now we can add other years
+  }else{
+    lines(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                              format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   units = "days"),
+          sel$VPDkpa,
+          col=rainbow(length(unique(years)))[y],pch=16)}
+}
+jpeg("VPDdoy.jpg")
+dev.off()
+#From here we can right click and save image and add the .jpg
+```
+
+
+
+
+```{r}
+# Filter data for June 2021 (adjust the month and year as needed)
+#Temp, VPD, and SWC During Heat Dome
+target_month <- c(06,07)  # June
+target_year <- 2021
+
+filtered_data1<- climatedatafull_long |> filter(origin=="VPDkpa"| origin=="soiltemp"|origin=="SWCpercent")
+
+filtered_data2<- filtered_data1 |> filter(month(ts) == target_month & year(ts) == target_year)
+
+head(filtered_data1)
+head(filtered_data2)
+
+filtered_data1$date <- as.Date(filtered_data1$ts)
+filtered_data1plot<-ggplot(filtered_data1, aes(x = date, y = value, color=origin)) +
+  geom_line(size=1,alpha=0.75) +
+  labs(title = "HJA Climate Variables Heat Dome 2021",
+       x = "Date", y = "Value",color="legend") +
+  theme_minimal()+scale_x_date(limits = as.Date(c("2021-06-01", "2021-07-31")))+ylim(0,16)
+
+# Add vertical dashed line at a specific date
+specific_date <- as.Date("2021-06-25")
+filtered_data1plot + geom_vline(xintercept = as.numeric(specific_date), linetype = "dashed", color = "black")+ annotate("text",x=specific_date-10,y=5,label="Onset of Heat Dome",color="black")+ guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+ggsave("HeatDomeClimate.jpg")
+```
+
+
+
+
+
+#Stress Degree Hours at 35 Deg C (56m in the DT or 4.5m PRIMET).You can plot that resulting time series, and also plot an accumulation of that time series to see how different time periods compare and different years
+
+
+
+Make sure initial files have date format of YYYY-MM-DD HH:MM:SS for code consistency
+If an error occurs when trying to write a CSV file check that it might be open in another application
+
+```{r}
+#Reading each Primet Temp file 
+PrimetTemps1 <- read.csv("~/research/primet temps1.csv", na.strings="NaN", stringsAsFactors=TRUE)
+PrimetTemps2 <- read.csv("~/research/primet temps2.csv", na.strings="NaN", stringsAsFactors=TRUE)
+
+#Getting good formats and hourly avgs for each file 
+PrimetTemps1$ts1<-as.POSIXct(PrimetTemps1$ts1,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+PrimetTemps2$ts2<-as.POSIXct(PrimetTemps2$ts2,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+
+PrimetTemps1$hour <- format(PrimetTemps1$ts1, "%Y-%m-%d %H:00:00")
+PrimetTemps2$hour <- format(PrimetTemps2$ts2, "%Y-%m-%d %H:00:00")
+
+hourly_avg_temp1_P <- PrimetTemps1 |> group_by(hour) |>  
+  summarise(avg_temp1_P = mean(value1, na.rm = TRUE))
+hourly_avg_sd1_P<-PrimetTemps1|>group_by(hour)|>
+  summarise(avg_sd1_P=mean(stressvalue1,na.rm=TRUE))
+
+hourly_avg_temp2_P <- PrimetTemps2 |> group_by(hour) |>  
+  summarise(avg_temp2_P = mean(value2, na.rm = TRUE))
+hourly_avg_sd2_P<-PrimetTemps2|>group_by(hour)|>
+  summarise(avg_sd2_P=mean(stressvalue2,na.rm=TRUE))
+
+hourly_avg_P1<-hourly_avg_sd1_P |>
+  mutate(ZeroOne1 = ifelse(is.na(avg_sd1_P) | avg_sd1_P == 0, 0, 1))|>mutate(avg_temp1_P = hourly_avg_temp1_P$avg_temp1_P)
+
+hourly_avg_P2<-hourly_avg_sd2_P |>
+  mutate(ZeroOne2 = ifelse(is.na(avg_sd2_P) | avg_sd2_P == 0, 0, 1))|>mutate(avg_temp2_P = hourly_avg_temp2_P$avg_temp2_P)
+
+#saving these to combine into one file
+write.csv(file="hourly_avg_P1.csv",hourly_avg_P1)
+write.csv(file="hourly_avg_P2.csv",hourly_avg_P2)
+```
+
+```{r}
+#same with VPD
+PrimetVPD1 <- read.csv("~/research/primet vpd1.csv", na.strings="NaN", stringsAsFactors=TRUE)
+PrimetVPD2 <- read.csv("~/research/primet vpd2.csv", na.strings="NaN", stringsAsFactors=TRUE)
+
+#Getting good formats and hourly avgs for each file
+PrimetVPD1$ts1<-as.POSIXct(PrimetVPD1$ts1,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+PrimetVPD2$ts2<-as.POSIXct(PrimetVPD2$ts2,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+
+PrimetVPD1$hour <- format(PrimetVPD1$ts1, "%Y-%m-%d %H:00:00")
+PrimetVPD2$hour <- format(PrimetVPD2$ts2, "%Y-%m-%d %H:00:00")
+
+hourly_avg_VPD1_P <- PrimetVPD1 |> group_by(hour) |>  
+  summarise(avg_VPD1_P = mean(kpaVPD1, na.rm = TRUE))
+hourly_avg_sv1_P<-PrimetVPD1|>group_by(hour)|>
+  summarise(avg_sv1_P=mean(StressVPD1,na.rm=TRUE))
+
+hourly_avg_VPD2_P <- PrimetVPD2 |> group_by(hour) |>  
+  summarise(avg_VPD2_P = mean(kpaVPD2, na.rm = TRUE))
+hourly_avg_sv2_P<-PrimetVPD2|>group_by(hour)|>
+  summarise(avg_sv2_P=mean(StressVPD2,na.rm=TRUE))
+
+hourly_avg_VPD_P1<-hourly_avg_sv1_P |>
+  mutate(ZeroOne1 = ifelse(is.na(avg_sv1_P) | avg_sv1_P == 0, 0, 1))|>mutate(avg_VPD1_P = hourly_avg_VPD1_P$avg_VPD1_P)
+
+hourly_avg_VPD_P2<-hourly_avg_sv2_P |>
+  mutate(ZeroOne2 = ifelse(is.na(avg_sv2_P) | avg_sv2_P == 0, 0, 1))|>mutate(avg_VPD2_P = hourly_avg_VPD2_P$avg_VPD2_P)
+
+#saving these to combine into one file
+write.csv(file="hourly_avg_VPD_P1.csv",hourly_avg_VPD_P1)
+write.csv(file="hourly_avg_VPD_P2.csv",hourly_avg_VPD_P2)
+```
+
+```{r}
+#hourly avgs for DSCmet
+DSC_VandT <- read.csv("~/research/DSC_VPD and temp.csv", na.strings="NaN", stringsAsFactors=TRUE)
+
+#Getting good formats and hourly avgs
+DSC_VandT$ts_D<-as.POSIXct(DSC_VandT$ts_D,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+
+DSC_VandT$hour <- format(DSC_VandT$ts_D, "%Y-%m-%d %H:00:00")
+
+hourly_avg_VPD_D <- DSC_VandT |> 
+  group_by(hour) |>  
+  summarise(avg_VPD_D = mean(VPD_D, na.rm = TRUE))
+
+hourly_avg_sv_D<-DSC_VandT|>
+  group_by(hour)|>
+  summarise(avg_sv_D=mean(stressVPD_D,na.rm=TRUE))
+
+hourly_avg_temp_D <- DSC_VandT |> 
+  group_by(hour) |>  
+  summarise(avg_temp_D = mean(airtemp_D, na.rm = TRUE))
+
+hourly_avg_sd_D<-DSC_VandT|>
+  group_by(hour)|>
+  summarise(avg_sd_D=mean(stressdeg_D,na.rm=TRUE))
+
+hourly_avg_sv_D<- hourly_avg_sv_D |>
+  mutate(ZeroOne_svD = ifelse(is.na(avg_sv_D) | avg_sv_D == 0, 0, 1))|>
+  mutate(avg_sv_D = hourly_avg_sv_D$avg_sv_D)
+
+hourly_avg_sd_D<- hourly_avg_sd_D |>
+  mutate(ZeroOne_sdD = ifelse(is.na(avg_sd_D) | avg_sd_D == 0, 0, 1))|>
+  mutate(avg_sd_D = hourly_avg_sd_D$avg_sd_D)
+
+hourly_avg_VandT_D<-
+  hourly_avg_sd_D|>
+  mutate(ZeroOne_sdD=hourly_avg_sd_D$ZeroOne_sdD)|>
+  mutate(avg_temp_D=hourly_avg_temp_D$avg_temp_D)|>
+  mutate(avg_sv_D=hourly_avg_sv_D$avg_sv_D)|>
+  mutate(ZeroOne_svD=hourly_avg_sd_D$ZeroOne_svD)|>
+  mutate(avg_VPD_D=hourly_avg_VPD_D$avg_VPD_D)
+
+write.csv(file="hourly_avg_VandT_D.csv",hourly_avg_VandT_D)
+```
+
+```{r}
+#Uploading and adjusting combined DSC and Primet after manual combining in Excel
+climate_DandP <- read.csv("~/research/climate D and P.csv", na.strings="NA", stringsAsFactors=TRUE)
+
+climate_DandP$VPD <- 
+  ifelse(is.na(climate_DandP$avg_VPD_D), 
+                            climate_DandP$avg_VPD1_P, 
+                            climate_DandP$avg_VPD_D)
+climate_DandP$ZOstressVPD <- 
+  ifelse(is.na(climate_DandP$ZeroOneSV_D), 
+                            climate_DandP$ZeroOne_svP, 
+                            climate_DandP$ZeroOneSV_D)
+climate_DandP$stressVPD <- 
+  ifelse(is.na(climate_DandP$avg_sv_D), 
+                            climate_DandP$avg_sv1_P, 
+                            climate_DandP$avg_sv_D)
+climate_DandP$temp <- 
+  ifelse(is.na(climate_DandP$avg_temp_D), 
+                            climate_DandP$avg_temp1_P, 
+                            climate_DandP$avg_temp_D)
+climate_DandP$ZOstresstemp <- 
+  ifelse(is.na(climate_DandP$ZeroOne_sdD), 
+                            climate_DandP$ZeroOne_sdP, 
+                            climate_DandP$ZeroOne_sdD)
+climate_DandP$stresstemp <- 
+  ifelse(is.na(climate_DandP$avg_sd_D), 
+                            climate_DandP$avg_sd1_P, 
+                            climate_DandP$avg_sd_D)
+
+climate_DandP$ts<-as.POSIXct(climate_DandP$hour,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+
+climate_DandP<-climate_DandP|>select(c(ts,temp,stresstemp,ZOstresstemp,VPD,stressVPD,ZOstressVPD))
+
+write.csv(file = "selectclimate_DandP.csv",climate_DandP)
+```
+
+Cumu long
+
+```{r}
+ClimateCumuLong<-climate_DandP|>
+  mutate(StressDegreeHours=cumsum(if_else(is.na(ZOstresstemp), 0, ZOstresstemp)))|> 
+  mutate(StressDegrees=cumsum(if_else(is.na(stresstemp), 0, stresstemp)))|>
+  mutate(StressVPDHours=cumsum(if_else(is.na(ZOstressVPD), 0, ZOstressVPD)))|> 
+  mutate(StressVPD=cumsum(if_else(is.na(stressVPD), 0, stressVPD)))
+
+ClimateCumuLong_plot<-ggplot(ClimateCumuLong,aes(x=ts)) + geom_point(aes(y=StressDegreeHours,color="StressDegreeHours")) + geom_point(aes(y=StressDegrees,color="StressDegrees")) + geom_point(aes(y=StressVPDHours,color="StressVPDHours")) + 
+  geom_point(aes(y=StressVPD,color="StressVPD")) + 
+  labs(title="Cumulative Stress Conditions at HJA",x="Date",y="Cumulative Stressors",color="Legend") + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5))) + theme_minimal()
+
+# Add the special tick mark and label to the x-axis
+specific_date <- as.POSIXct("2021-06-25")
+ClimateCumuLong_plot + geom_vline(xintercept = (specific_date), linetype = "dashed", color = "black")+ annotate("text",x=specific_date,y=-0.5,label="Onset of Heat Dome",color="black")+theme_minimal()
+```
+
+
+Getting cumulative values after turning the above into a wide format in Excel
+
+```{r}
+#First getting DOY
+selectclimate_DandP_wide <- read.csv("~/research/selectclimate_DandP_wide.csv", na.strings="NA", stringsAsFactors=TRUE)
+
+selectclimate_DandP_wide$ts_format<-as.POSIXct(selectclimate_DandP_wide$ts14,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+selectclimate_DandP_wide$DOY<-yday(selectclimate_DandP_wide$ts_format)
+
+sdCumu<-selectclimate_DandP_wide|>
+   mutate(sd14cumu=cumsum(if_else(is.na(sd14), 0, sd14)))|>   
+   mutate(sd15cumu=cumsum(if_else(is.na(sd15), 0, sd15)))|>
+   mutate(sd16cumu=cumsum(if_else(is.na(sd16), 0, sd16)))|>
+   mutate(sd17cumu=cumsum(if_else(is.na(sd17), 0, sd17)))|>
+   mutate(sd18cumu=cumsum(if_else(is.na(sd18), 0, sd18)))|>
+   mutate(sd19cumu=cumsum(if_else(is.na(sd19), 0, sd19)))|>
+   mutate(sd20cumu=cumsum(if_else(is.na(sd20), 0, sd20)))|>
+   mutate(sd21cumu=cumsum(if_else(is.na(sd21), 0, sd21)))|>
+   mutate(sd22cumu=cumsum(if_else(is.na(sd22), 0, sd22)))|>
+   mutate(sd23cumu=cumsum(if_else(is.na(sd23), 0, sd23)))
+
+SDH_Cumu<-selectclimate_DandP_wide|>
+   mutate(SDH14cumu=cumsum(if_else(is.na(ZOsd14), 0, ZOsd14)))|>   
+   mutate(SDH15cumu=cumsum(if_else(is.na(ZOsd15), 0, ZOsd15)))|>
+   mutate(SDH16cumu=cumsum(if_else(is.na(ZOsd16), 0, ZOsd16)))|>
+   mutate(SDH17cumu=cumsum(if_else(is.na(ZOsd17), 0, ZOsd17)))|>
+   mutate(SDH18cumu=cumsum(if_else(is.na(ZOsd18), 0, ZOsd18)))|>
+   mutate(SDH19cumu=cumsum(if_else(is.na(ZOsd19), 0, ZOsd19)))|>
+   mutate(SDH20cumu=cumsum(if_else(is.na(ZOsd20), 0, ZOsd20)))|>
+   mutate(SDH21cumu=cumsum(if_else(is.na(ZOsd21), 0, ZOsd21)))|>
+   mutate(SDH22cumu=cumsum(if_else(is.na(ZOsd22), 0, ZOsd22)))|>
+   mutate(SDH23cumu=cumsum(if_else(is.na(ZOsd23), 0, ZOsd23)))
+
+svCumu<-selectclimate_DandP_wide|>
+   mutate(sv14cumu=cumsum(if_else(is.na(sv14), 0, sv14)))|>   
+   mutate(sv15cumu=cumsum(if_else(is.na(sv15), 0, sv15)))|>
+   mutate(sv16cumu=cumsum(if_else(is.na(sv16), 0, sv16)))|>
+   mutate(sv17cumu=cumsum(if_else(is.na(sv17), 0, sv17)))|>
+   mutate(sv18cumu=cumsum(if_else(is.na(sv18), 0, sv18)))|>
+   mutate(sv19cumu=cumsum(if_else(is.na(sv19), 0, sv19)))|>
+   mutate(sv20cumu=cumsum(if_else(is.na(sv20), 0, sv20)))|>
+   mutate(sv21cumu=cumsum(if_else(is.na(sv21), 0, sv21)))|>
+   mutate(sv22cumu=cumsum(if_else(is.na(sv22), 0, sv22)))|>
+   mutate(sv23cumu=cumsum(if_else(is.na(sv23), 0, sv23)))
+
+VPDH_Cumu<-selectclimate_DandP_wide|>
+   mutate(VPDH14cumu=cumsum(if_else(is.na(ZOsv14), 0, ZOsv14)))|>   
+   mutate(VPDH15cumu=cumsum(if_else(is.na(ZOsv15), 0, ZOsv15)))|>
+   mutate(VPDH16cumu=cumsum(if_else(is.na(ZOsv16), 0, ZOsv16)))|>
+   mutate(VPDH17cumu=cumsum(if_else(is.na(ZOsv17), 0, ZOsv17)))|>
+   mutate(VPDH18cumu=cumsum(if_else(is.na(ZOsv18), 0, ZOsv18)))|>
+   mutate(VPDH19cumu=cumsum(if_else(is.na(ZOsv19), 0, ZOsv19)))|>
+   mutate(VPDH20cumu=cumsum(if_else(is.na(ZOsv20), 0, ZOsv20)))|>
+   mutate(VPDH21cumu=cumsum(if_else(is.na(ZOsv21), 0, ZOsv21)))|>
+   mutate(VPDH22cumu=cumsum(if_else(is.na(ZOsv22), 0, ZOsv22)))|>
+   mutate(VPDH23cumu=cumsum(if_else(is.na(ZOsv23), 0, ZOsv23)))
+```
+
+
+```{r}
+#cumu SDH by DOY
+
+custom_colors <- c("SDH14cumu" = "magenta","SDH15cumu" = "maroon","SDH16cumu" = "red", "SDH17cumu" = "orange", "SDH18cumu" = "yellow", "SDH19cumu" = "green", "SDH20cumu" = "turquoise", "SDH21cumu" = "blue", "SDH22cumu" = "purple", "SDH23cumu" = "pink")
+
+SDH_cumu_plot<-ggplot(SDH_Cumu,aes(x=DOY)) +
+  geom_point(aes(y=SDH14cumu,color="SDH14cumu")) +
+  geom_point(aes(y=SDH15cumu,color="SDH15cumu")) +
+  geom_point(aes(y=SDH16cumu,color="SDH16cumu")) +
+  geom_point(aes(y=SDH17cumu,color="SDH17cumu")) +
+  geom_point(aes(y=SDH18cumu,color="SDH18cumu"))+
+  geom_point(aes(y=SDH19cumu,color="SDH19cumu"))+
+  geom_point(aes(y=SDH20cumu,color="SDH20cumu"))+
+  geom_point(aes(y=SDH21cumu,color="SDH21cumu"))+
+  geom_point(aes(y=SDH22cumu,color="SDH22cumu"))+
+  geom_point(aes(y=SDH23cumu,color="SDH23cumu"))+
+  labs(title="Cumulative Stress Degree Hours by Year",
+       x="Day of Year",y="Cumulative Stress Degree Hours (Integer Hours)",color="Legend")+   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5))) + theme_minimal()
+
+# Add the special tick mark and label to the x-axis
+
+SDH_cumu_plot + scale_x_continuous(limits=c(150,250),breaks = c(150,176,200,225,250), labels = c(150,176,200,225,250))+
+  scale_y_continuous(limits = c(0,51),breaks=c(0,10,20,30,40,50),labels =c(0,10,20,30,40,50))
+```
+
+```{r}
+#Cumu Stress degrees by DOY
+
+custom_SDcolors <- c("sd14cumu" = "magenta","sd15cumu" = "maroon","sd16cumu" = "red","sd17cumu" = "orange", "sd18cumu" = "yellow", "sd19cumu" = "green", "sd20cumu" = "turquoise", "sd21cumu" = "blue", "sd22cumu" = "purple", "sd23cumu" = "pink")
+
+sdCumu_plot<-ggplot(sdCumu,aes(x=DOY)) + geom_point(aes(y=sd14cumu,color="sd14cumu")) +
+  geom_point(aes(y=sd15cumu,color="sd15cumu")) + 
+  geom_point(aes(y=sd16cumu,color="sd16cumu")) + 
+  geom_point(aes(y=sd17cumu,color="sd17cumu")) + 
+  geom_point(aes(y=sd18cumu,color="sd18cumu")) + 
+  geom_point(aes(y=sd19cumu,color="sd19cumu")) + 
+  geom_point(aes(y=sd20cumu,color="sd20cumu")) + 
+  geom_point(aes(y=sd21cumu,color="sd21cumu")) + 
+  geom_point(aes(y=sd22cumu,color="sd22cumu")) + 
+  geom_point(aes(y=sd23cumu,color="sd23cumu")) + 
+  labs(title="Cumulative Stress Degrees by Year",x="Day of Year",y="Cumulative Stress Degrees (Deg. C)",color="Legend")+   scale_color_manual(values = custom_SDcolors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5))) + theme_minimal()
+
+# Add the special tick mark and label to the x-axis
+
+sdCumu_plot + scale_x_continuous(limits=c(150,250),breaks = c(150,176,200,225,250), labels = c(150,176,200,225,250))+scale_y_continuous(limits = c(0,150),breaks=c(0,25,50,75,100,125,150),labels =c(0,25,50,75,100,125,150) )
+```
+
+```{r}
+#Cumu Stress VPD Hours by DOY
+
+custom_VPDHcolors <- c("VPDH14cumu" = "magenta","VPDH15cumu" = "maroon","VPDH16cumu" = "red","VPDH17cumu" = "orange", "VPDH18cumu" = "yellow", "VPDH19cumu" = "green", "VPDH20cumu" = "turquoise", "VPDH21cumu" = "blue", "VPDH22cumu" = "purple", "VPDH23cumu" = "pink")
+
+VPDH_Cumu_plot<-ggplot(VPDH_Cumu,aes(x=DOY)) + geom_point(aes(y=VPDH14cumu,color="VPDH14cumu")) +
+  geom_point(aes(y=VPDH15cumu,color="VPDH15cumu")) + 
+  geom_point(aes(y=VPDH16cumu,color="VPDH16cumu")) + 
+  geom_point(aes(y=VPDH17cumu,color="VPDH17cumu")) + 
+  geom_point(aes(y=VPDH18cumu,color="VPDH18cumu")) + 
+  geom_point(aes(y=VPDH19cumu,color="VPDH19cumu")) + 
+  geom_point(aes(y=VPDH20cumu,color="VPDH20cumu")) + 
+  geom_point(aes(y=VPDH21cumu,color="VPDH21cumu")) + 
+  geom_point(aes(y=VPDH22cumu,color="VPDH22cumu")) + 
+  geom_point(aes(y=VPDH23cumu,color="VPDH23cumu")) + 
+  labs(title="Cumulative Stress VPD Hours by Year",x="Day of Year",y="Cumulative Stress VPD Hours (Integer Hours)",color="Legend")+   scale_color_manual(values = custom_VPDHcolors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5))) + theme_minimal()
+
+# Add the special tick mark and label to the x-axis
+
+VPDH_Cumu_plot + scale_x_continuous(limits=c(100,300),
+  breaks = c(100,125,150,176,200,225,250,275,300), 
+  labels = c(100,125,150,176,200,225,250,275,300))+
+  scale_y_continuous(limits = c(0,250),
+  breaks=c(0,50,100,150,200,250),
+  labels =c(0,50,100,150,200,250))
+```
+
+```{r}
+#Cumu Stress VPD Values by DOY
+
+custom_svcolors <- c("sv14cumu" = "magenta","sv15cumu" = "maroon","sv16cumu" = "red","sv17cumu" = "orange", "sv18cumu" = "yellow", "sv19cumu" = "green", "sv20cumu" = "turquoise", "sv21cumu" = "blue", "sv22cumu" = "purple", "sv23cumu" = "pink")
+
+svCumu_plot<-ggplot(svCumu,aes(x=DOY)) + geom_point(aes(y=sv14cumu,color="sv14cumu")) +
+  geom_point(aes(y=sv15cumu,color="sv15cumu")) + 
+  geom_point(aes(y=sv16cumu,color="sv16cumu")) + 
+  geom_point(aes(y=sv17cumu,color="sv17cumu")) + 
+  geom_point(aes(y=sv18cumu,color="sv18cumu")) + 
+  geom_point(aes(y=sv19cumu,color="sv19cumu")) + 
+  geom_point(aes(y=sv20cumu,color="sv20cumu")) + 
+  geom_point(aes(y=sv21cumu,color="sv21cumu")) + 
+  geom_point(aes(y=sv22cumu,color="sv22cumu")) + 
+  geom_point(aes(y=sv23cumu,color="sv23cumu")) + 
+  labs(title="Cumulative Stress VPD Values by Year",x="Day of Year",y="Cumulative Stress VPD Values (kpa)",color="Legend")+   scale_color_manual(values = custom_svcolors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5))) + theme_minimal()
+
+# Add the special tick mark and label to the x-axis
+
+svCumu_plot + scale_x_continuous(limits=c(100,275),breaks = c(100,125,150,176,200,225,250,275), labels = c(100,125,150,176,200,225,250,275))+scale_y_continuous(limits = c(0,210),breaks=c(0,25,50,75,100,125,150,175,200),labels =c(0,25,50,75,100,125,150,175,200))
+```
+
+
+
+
+
+```{r}
+#Focusing on the heat dome
+selectclimate_DandP_wide_ts21<-read.csv("~/research/selectclimate_DandP_wide_ts21.csv", na.strings="NA", stringsAsFactors=TRUE)
+
+selectclimate_DandP_wide_ts21$ts21<-as.POSIXct(selectclimate_DandP_wide_ts21$ts21,format="%Y-%m-%d %H:%M:%S",tz="GMT")
+
+selectclimate_DandP_wide_ts21$StressDegrees_Cumu<-
+  sdCumu$sd21cumu
+selectclimate_DandP_wide_ts21$StressDegreeHours_Cumu<-
+  SDH_Cumu$SDH21cumu
+selectclimate_DandP_wide_ts21$StressVPD_Cumu<-
+  svCumu$sv21cumu
+selectclimate_DandP_wide_ts21$StressVPDHours_Cumu<-
+  VPDH_Cumu$VPDH21cumu
+
+start_date <- as.POSIXct('2021-06-01 00:00')
+end_date <- as.POSIXct('2021-08-01 00:00')
+
+HeatDome_plot<-ggplot(selectclimate_DandP_wide_ts21,aes(x=ts21)) +
+   geom_point(aes(y=StressDegreeHours_Cumu,color="StressDegreeHours_Cumu")) +
+  geom_point(aes(y=StressDegrees_Cumu,color="StressDegrees_Cumu"))+
+  geom_point(aes(y=StressVPDHours_Cumu,color="StressVPDHours_Cumu")) +
+  geom_point(aes(y=StressVPD_Cumu,color="StressVPD_Cumu")) +
+  labs(title="Cumulative HJA Stressors During 2021 Heat Dome",x="Date",y="Value (# of Hours, Deg. C, or kpa)",color="Legend")+theme_minimal()+
+  scale_x_datetime(limits = c(start_date, end_date))+
+  scale_y_continuous(limits = c(0,160),breaks=c(0,25,50,75,100,125,150),labels =c(0,25,50,75,100,125,150))+ guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))
+
+# Add vertical dashed line at a specific date
+
+specific_date <- as.POSIXct("2021-06-25")
+HeatDome_plot + geom_vline(xintercept = (specific_date), linetype = "dashed", color = "black")+ annotate("text",x=specific_date,y=130,label="Onset of Heat Dome",color="black")+theme_minimal()
+```
+
+```{r}
+#VPD DOY per year with Primet Included - redo with ggplot 
+
+
+climate_DandP$yr<-format(climate_DandP$ts, "%Y")
+
+#First grab years string
+left <- function(string, char){substr(string, 1,char)} 
+years <-left(climate_DandP[,"ts"],4)
+#To plot, set number of plots with par()
+par(mfrow=c(1,1))
+#Then set margins 
+par(mar = c(5, 5, 5, 5))
+for(y in 1:length(unique(years))){
+#Now we can select years
+sel<-climate_DandP[which(years==unique(years)[y]),]
+#But we need to handle first year first
+if(y==1){
+   plot(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+  as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                  format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                  units = "days"),
+         sel$VPD,
+         ylab="VPD (kpa)",
+         xlab="Day of year",type="l",
+         col=rainbow(length(unique(years)))[y],
+         xlim=c(100,300),
+         ylim=c(3,
+                max(climate_DandP$VPD,na.rm=T)),
+         main="HJA VPD Through the Years")
+    
+    legend("topright",
+           as.character(unique(climate_DandP$yr)),
+           col=rainbow(length(unique(climate_DandP$yr))),
+           bty="n",pch=16,ncol = 2,cex=0.75)
+# Now we can add other years
+  }else{
+    lines(difftime(as.POSIXct(sel$ts,format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   as.POSIXct(paste0(unique(years)[y],"-01-01 00:00:00"),
+                              format="%Y-%m-%d %H:%M:%S",tz="GMT"),
+                   units = "days"),
+          sel$VPD,
+          col=rainbow(length(unique(years)))[y],pch=16)}
+}
+
+#From here we can right click and save image and add the .jpg
+```
+
+
+
+```{r}
+#Temp vs VPD with Primet
+
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
+
+ggplot(climate_DandP ,aes(x=temp,y=VPD,color=factor(yr)))+
+  geom_point(size=1,alpha=0.5)+labs(title="HJA Air Temperature vs. VPD",x="Air Temperature (deg. C)",y="VPD (kpa)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+
+#Stress temp vs Stress VPD with Primet
+
+ggplot(climate_DandP ,aes(x=stresstemp,y=stressVPD,color=factor(yr)))+
+  geom_point(size=2.5,alpha=1)+labs(title="HJA Stress Air Temperature vs. Stress VPD",x="Degrees >= 35 deg. C",y="VPD value >= 3 kpa",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+```
+
+```{r}
+#Focusing on the heat dome
+
+selectclimate_DandP_wide_ts21$Stress_Temp<-selectclimate_DandP_wide_ts21$sd21
+selectclimate_DandP_wide_ts21$Stress_VPD<-selectclimate_DandP_wide_ts21$sv21
+
+start_date <- as.POSIXct('2021-06-01 00:00')
+end_date <- as.POSIXct('2021-08-01 00:00')
+
+HeatDome_plot_TvV<-ggplot(selectclimate_DandP_wide_ts21,aes(x=ts21)) +
+   geom_point(aes(y=Stress_Temp,color="Stress_Temp")) +
+  geom_point(aes(y=Stress_VPD,color="Stress_VPD"))+
+  labs(title="HJA Stressors During 2021 Heat Dome",x="Date",y="Value (Deg. C or kpa)",color="Legend")+theme_minimal()+
+  scale_x_datetime(limits = c(start_date, end_date))+
+  scale_y_continuous(limits = c(-0.5,9),breaks=c(0,1,2,3,4,5,6,7,8,9),labels =c(0,1,2,3,4,5,6,7,8,9))+ guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))
+
+# Add vertical dashed line at a specific date
+
+specific_date <- as.POSIXct("2021-06-25")
+HeatDome_plot_TvV + geom_vline(xintercept = (specific_date), linetype = "dashed", color = "black")+ annotate("text",x=specific_date,y=-0.5,label="Onset of Heat Dome",color="black")+theme_minimal()
+
+```
+
+
