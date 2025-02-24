@@ -12,7 +12,7 @@ misc- miscellaneous files that don't belong anywhere else (e.g., functions)
 Misc_analyses- data analyses that don't fit anywhere else 
 (e.g., analyses in Excel,BAI [now likely incorrect])
 modeling- research-adjacent modeling files and analyses
-(e.g., climate toolbox; 3PG [including everyhthing from 3PG class])
+(e.g., climate toolbox; 3PG [including everything from 3PG class])
 novel_code- exclusive spot for new code / functions / scripts I have written
 TreeNetProc- .rmd + dendrometer data files for analyzing with TreeNetProc
 this includes all files for TOMST dendrometer data 
