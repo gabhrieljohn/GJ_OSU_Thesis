@@ -17,40 +17,34 @@ library(tidyverse)
 library(dendRoAnalyst)
 ```
 
-## Help Pages
+## Help Pages & Function Information
 
-|                                                                                                            |                                                                                                           |
-|------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| [clim.twd](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/clim.twd.html)                           | Calculating relative growth change during no-rain periods.                                                |
-| [daily.data](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/daily.data.html)                       | Calculation of daily statistics for dendrometer data                                                      |
-| [dendro.resample](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.resample.html)             | Resampling temporal resolution of dendrometer and climate data                                            |
-| [dendro.truncate](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.truncate.html)             | Truncation of the dendrometer data                                                                        |
-| [dm.detrend](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.detrend.html)                       | Detrend the dendrometer data                                                                              |
-| [dm.fit.gompertz](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.fit.gompertz.html)             | Fitting gompertz function on annual dendrometer data                                                      |
-| [dm.na.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.na.interpolation.html)     | Detection and interpolation of missing values in dendrometer data.                                        |
-| [gf_nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/gf_nepa17.html)                         | Dendrometer data of Kathmandu for 2017 with gap filled                                                    |
-| [i.jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/i.jump.locator.html)               | Removing artefacts due to manual adjustments of dendrometers interactively                                |
-| [jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/jump.locator.html)                   | Removing artefacts due to manual adjustments of dendrometers automatically for more than one dendrometers |
-| [ktm_rain17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/ktm_rain17.html)                       | Daily rainfall data of Kathmandu for 2017.                                                                |
-| [mean_detrended.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mean_detrended.dm.html)         | Calculate mean of detrended dendrometer data.                                                             |
-| [mov.cor.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mov.cor.dm.html)                       | Calculating running correlation between dendrometer data and daily climate.                               |
-| [nepa](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa.html)                                   | Dendrometer data from Kathmandu                                                                           |
-| [nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa17.html)                               | Dendrometer data of Kathmandu for 2017                                                                    |
-| [nepa2](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa2.html)                                 | Dendrometer data from Kathmandu version 2                                                                 |
-| [network.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/network.interpolation.html) | Interpolation of NA values using the dendrometer network                                                  |
-| [phase.sc](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.sc.html)                           | Application of the stem-cycle approach to calculate different phases, their duration and to plot them.    |
-| [phase.zg](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.zg.html)                           | Application of the zero-growth approach to calculate different phases, their duration and to plot them.   |
-| [plot_mov.cor](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_mov.cor.html)                   | Plotting moving correlation with climate.                                                                 |
-| [plot_SC_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_SC_output.html)               | Plotting output of stem cycle approach (i.e., output of phase.sc function).                               |
-| [plot_ZG_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_ZG_output.html)               | Plotting output of zero-growth approach (i.e., output of phase.zg function).                              |
-| [read.dendrometer](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/read.dendrometer.html)           | Reading dendrometer data.                                                                                 |
-| [twd.maxima](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/twd.maxima.html)                       | Locating the maxima of TWD periods                                                                        |
-
-New to dendRoAnalyst version 0.1.5!
-
--   This version of package is based on the ‘tidyverse’.
-
--   The functions are faster compared to previous version.
+|  |  |
+|----|----|
+| [clim.twd](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/clim.twd.html) | Calculating relative growth change during no-rain periods. |
+| [daily.data](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/daily.data.html) | Calculation of daily statistics for dendrometer data |
+| [dendro.resample](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.resample.html) | Resampling temporal resolution of dendrometer and climate data |
+| [dendro.truncate](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.truncate.html) | Truncation of the dendrometer data |
+| [dm.detrend](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.detrend.html) | Detrend the dendrometer data |
+| [dm.fit.gompertz](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.fit.gompertz.html) | Fitting gompertz function on annual dendrometer data |
+| [dm.na.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.na.interpolation.html) | Detection and interpolation of missing values in dendrometer data. |
+| [gf_nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/gf_nepa17.html) | Dendrometer data of Kathmandu for 2017 with gap filled |
+| [i.jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/i.jump.locator.html) | Removing artefacts due to manual adjustments of dendrometers interactively |
+| [jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/jump.locator.html) | Removing artefacts due to manual adjustments of dendrometers automatically for more than one dendrometers |
+| [ktm_rain17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/ktm_rain17.html) | Daily rainfall data of Kathmandu for 2017. |
+| [mean_detrended.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mean_detrended.dm.html) | Calculate mean of detrended dendrometer data. |
+| [mov.cor.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mov.cor.dm.html) | Calculating running correlation between dendrometer data and daily climate. |
+| [nepa](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa.html) | Dendrometer data from Kathmandu |
+| [nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa17.html) | Dendrometer data of Kathmandu for 2017 |
+| [nepa2](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa2.html) | Dendrometer data from Kathmandu version 2 |
+| [network.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/network.interpolation.html) | Interpolation of NA values using the dendrometer network |
+| [phase.sc](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.sc.html) | Application of the stem-cycle approach to calculate different phases, their duration and to plot them. |
+| [phase.zg](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.zg.html) | Application of the zero-growth approach to calculate different phases, their duration and to plot them. |
+| [plot_mov.cor](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_mov.cor.html) | Plotting moving correlation with climate. |
+| [plot_SC_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_SC_output.html) | Plotting output of stem cycle approach (i.e., output of phase.sc function). |
+| [plot_ZG_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_ZG_output.html) | Plotting output of zero-growth approach (i.e., output of phase.zg function). |
+| [read.dendrometer](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/read.dendrometer.html) | Reading dendrometer data. |
+| [twd.maxima](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/twd.maxima.html) | Locating the maxima of TWD periods |
 
 -   The ‘phase.sc’ and ‘phase.zg’ only calculate the phases and phase statistics.
 
@@ -75,59 +69,32 @@ New to dendRoAnalyst version 0.1.5!
 -   
 
 ```{r}
-For plain text (.txt), comma separated (.csv) and excel (.xlsx) format:
+#For plain text (.txt), comma separated (.csv) and excel (.xlsx) format:
 
 df <- read.dendrometer("nepa.txt")
-R version 4.0.0 (2020-04-24) -- "Arbor Day"
-Copyright (C) 2020 The R Foundation for Statistical Computing
-Platform: x86_64-w64-mingw32/x64 (64-bit)
 
-R is free software and comes with ABSOLUTELY NO WARRANTY.
-You are welcome to redistribute it under certain conditions.
-Type 'license()' or 'licence()' for distribution details.
 
-  Natural language support but running in an English locale
-
-R is a collaborative project with many contributors.
-Type 'contributors()' for more information and
-'citation()' on how to cite R or R packages in publications.
-
-Type 'demo()' for some demos, 'help()' for on-line help, or
-'help.start()' for an HTML browser interface to help.
-Type 'q()' to quit R.
-
-> pkgname <- "dendRoAnalyst"
-> source(file.path(R.home("share"), "R", "examples-header.R"))
-> options(warn = 1)
-> options(pager = "console")
-> library('dendRoAnalyst')
-Loading required package: boot
-Loading required package: pspline
-Loading required package: zoo
-
-Attaching package: 'zoo'
-
-The following objects are masked from 'package:base':
-
-    as.Date, as.Date.numeric
-
-> 
-> base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
-> base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
-> cleanEx()
-> nameEx("clim.twd")
-> ### * clim.twd
-> 
-> flush(stderr()); flush(stdout())
-> 
-> ### Name: clim.twd
-> ### Title: Calculating relative growth change during no-rain periods.
-> ### Aliases: clim.twd
-> 
-> ### ** Examples
-> 
-> library(dendRoAnalyst)
-> data(gf_nepa17)
+ pkgname <- "dendRoAnalyst"
+ source(file.path(R.home("share"), "R", "examples-header.R"))
+ options(warn = 1)
+ options(pager = "console")
+ library('dendRoAnalyst')
+ base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+ base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
+ cleanEx()
+ nameEx("clim.twd")
+ ### * clim.twd
+ 
+ flush(stderr()); flush(stdout())
+ 
+ ### Name: clim.twd
+ ### Title: Calculating relative growth change during no-rain periods.
+ ### Aliases: clim.twd
+ 
+ ### ** Examples
+ 
+ library(dendRoAnalyst)
+ data(gf_nepa17)
 > data(ktm_rain17)
 > relative_dry_growth<-clim.twd(df=gf_nepa17, Clim=ktm_rain17, dailyValue='max', showPlot=TRUE)
 [1] "The adverse climatic periods are listed below:"
