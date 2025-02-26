@@ -1,0 +1,55 @@
+---
+title: "ecomatik"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(viridis)
+library(tidyr)
+library(lubridate)
+library(zoo)
+library(tidyverse)
+library(dendRoAnalyst)
+#All relative file paths have "GJ)OSU_Thesis" as the working directory
+```
+
+```{r}
+#reading in each year of dendrometer values in DSCMET422
+#each CSV 1st adjusted in Excel to remove non-header/data rows & format ts YMD
+# YYYY-MM-DD HH:MM:SS ts format
+
+EM2018 <- read_csv("Ecomatik/raw_data_DSCMET422/dscmet_422_a_5min_2018YMD.csv")
+
+```
+
+```{r}
+primet_226_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2021.csv", na.strings="NaN")
+primet_226_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2022.csv", na.strings="NaN")
+primet_226_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2023.csv", na.strings="NaN")
+
+#Combining into one dataframe (bind_rows because col names change in 2019)
+P226long <- bind_rows(
+  primet_226_a_5min_2014,
+  primet_226_a_5min_2015,
+  primet_226_a_5min_2016,
+  primet_226_a_5min_2017,
+  primet_226_a_5min_2018,
+  primet_226_a_5min_2019,
+  primet_226_a_5min_2020,
+  primet_226_a_5min_2021,
+  primet_226_a_5min_2022,
+  primet_226_a_5min_2023)
+```
+
+```{r}
+HQSWP2577ts<- read.csv("~/research2/TreeNetProc/TOMST/HQSWP/HQSWP_2577_ts_YMD.csv", stringsAsFactors = TRUE)
+HQSWP2577ts$value<-as.numeric(HQSWP2577ts$value)
+HQSWP2577ts$ts<-as.POSIXct(HQSWP2577ts$ts,format="%Y.%m.%d %H:%M",tz="GMT")
+HQSWP2577ts$ts<-parse_date_time(HQSWP2577ts$ts,orders=c("ymd","ymd HMS"))
+HQSWP2577ts$yr<-format(HQSWP2577ts$ts, "%Y")
+HQSWP2577ts$yr<-as.factor(HQSWP2577ts$yr)
+```
+
