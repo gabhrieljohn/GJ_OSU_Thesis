@@ -20,9 +20,8 @@ library(dendRoAnalyst)
 
 custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
 ```
-
-```{r}
 #reading in each year of dendrometer values in DSCMET422
+```{r}
 #each CSV 1st adjuTosted in Excel to remove non-header/data rows & format ts YMD
 # YYYY-MM-DD HH:MM:SS ts format
 
@@ -51,6 +50,9 @@ dscmet_422_all$ts<-dscmet_422_all$Date
 dscmet_422_all$yr<-format(dscmet_422_all$ts, "%Y")
 dscmet_422_all$yr<-as.factor(dscmet_422_all$yr)
 dscmet_422_all$DOY<-yday(dscmet_422_all$ts)
+write.csv(file="dscmet_422_all.csv",dscmet_422_all)
+save(dscmet_422_all,file="dscmet_422_all")
+#can recall this with load() without bringing in the CSV file  
 
 unique_422_strings <- unique(unlist(sapply(dscmet_422_all, function(x) x[is.character(x)])))
 ```
@@ -68,14 +70,14 @@ filtered_Primet2014_2024_filled <- Primet2014_2024_filled[!rowSums(sapply(Primet
 
 3- Filtering flags after searching in R environment object where flags show up 
 Primet2014_2024_sorted_filled$SWC_MEAN_0_100_04[P230long_filled$Flag_SWC_MEAN_0_100_04=="Q"] <- NA
-```
 
 #Plotting AVG dendro value for 309
+Ecomatik website says the DC series measures "high-precision and continuous measurement of changes in stem circumference"
 ```{r}
 dscmet_422_all$Dend309 <- dscmet_422_all$DEND309_AVG_4200_0_01 
 
-ggplot(dscmet_422_all ,aes(x=temp,y=VPD,color=factor(yr)))+
-  geom_point(size=1,alpha=0.5)+labs(title="HJA Air Temperature vs. VPD",x="Air Temperature (deg. C)",y="VPD (kpa)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+ggplot(dscmet_422_all ,aes(x=DOY,y=Dend309,color=factor(yr)))+
+  geom_point(size=1,alpha=0.5)+labs(title="HJA Douglas-fir (ID 309) Stem Circumference Changes",x="Day of Year",y="Stem Circumference Change (µm)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
 ```
 
 
