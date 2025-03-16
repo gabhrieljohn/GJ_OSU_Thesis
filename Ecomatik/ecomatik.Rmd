@@ -13,18 +13,16 @@ library(lubridate)
 library(zoo)
 library(tidyverse)
 library(dendRoAnalyst)
-#All relative file paths have "GJ)OSU_Thesis" as the working directory, e.g.,:
-#setwd("C:/Users/Gabby/Desktop/GJ_OSU_Thesis/GJ_OSU_Thesis")
+#All relative file paths have "GJ_OSU_Thesis" as the working directory, e.g.,:
+setwd("C:/Users/Gabby/Desktop/GJ_OSU_Thesis/GJ_OSU_Thesis")
 ```
 
 ```{r}
 #reading in each year of dendrometer values in DSCMET422
 #each CSV 1st adjusted in Excel to remove non-header/data rows & format ts YMD
 # YYYY-MM-DD HH:MM:SS ts format
-var_list_files<-list.files(path="raw_data_DSCMET422",full.names = TRUE, recursive = TRUE)
-var_list_files
 
-dscmet_422_a_5min_2018YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2018YMD.csv")
+dscmet_422_a_5min_2018YMD <- read_csv("GJ_OSU_Thesis/Ecomatik/raw_data_DSCMET422/dscmet_422_a_5min_2018YMD.csv")
 
 ```
 
