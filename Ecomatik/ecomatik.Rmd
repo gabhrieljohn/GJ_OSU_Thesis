@@ -13,44 +13,69 @@ library(lubridate)
 library(zoo)
 library(tidyverse)
 library(dendRoAnalyst)
-#All relative file paths have "GJ_OSU_Thesis" as the working directory, e.g.,:
-setwd("C:/Users/Gabby/Desktop/GJ_OSU_Thesis/GJ_OSU_Thesis")
+#All relative file paths have "Ecomatik" as the working directory, e.g.,:
+#setwd("C:/Users/Gabby/Desktop/GJ_OSU_Thesis/GJ_OSU_Thesis/Ecomatik")
+#"GJ_OSU_Thesis" is the default WD when I first open the .RProj (at least it should be)
+
+
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
 ```
 
 ```{r}
 #reading in each year of dendrometer values in DSCMET422
-#each CSV 1st adjusted in Excel to remove non-header/data rows & format ts YMD
+#each CSV 1st adjuTosted in Excel to remove non-header/data rows & format ts YMD
 # YYYY-MM-DD HH:MM:SS ts format
 
-dscmet_422_a_5min_2018YMD <- read_csv("GJ_OSU_Thesis/Ecomatik/raw_data_DSCMET422/dscmet_422_a_5min_2018YMD.csv")
+dscmet_422_a_5min_2018YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2018YMD.csv")
+dscmet_422_a_5min_2019YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2019YMD.csv")
+dscmet_422_a_5min_2020YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2020YMD.csv")
+dscmet_422_a_5min_2021YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2021YMD.csv")
+dscmet_422_a_5min_2022YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2022YMD.csv")
+dscmet_422_a_5min_2023YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2023YMD.csv")
+dscmet_422_a_5min_2024YMD <- read_csv("raw_data_DSCMET422/dscmet_422_a_5min_2024YMD.csv")
 
+#combining into one df
+dscmet_422_all <- bind_rows(
+  dscmet_422_a_5min_2018YMD,
+  dscmet_422_a_5min_2019YMD,
+  dscmet_422_a_5min_2020YMD,
+  dscmet_422_a_5min_2021YMD,
+  dscmet_422_a_5min_2022YMD,
+  dscmet_422_a_5min_2023YMD,
+  dscmet_422_a_5min_2024YMD
+)
+
+#This final object should already have Date in POSIXct YYYY-MM-DD HH:MM:SS foramat
+
+dscmet_422_all$ts<-dscmet_422_all$Date
+dscmet_422_all$yr<-format(dscmet_422_all$ts, "%Y")
+dscmet_422_all$yr<-as.factor(dscmet_422_all$yr)
+dscmet_422_all$DOY<-yday(dscmet_422_all$ts)
+
+unique_422_strings <- unique(unlist(sapply(dscmet_422_all, function(x) x[is.character(x)])))
 ```
 
+The flags in this dataframe ended up not being problematic. They were "M" "P" "E" and "MM"
+From metadata, P:  "flag_valuechange(PROGID,0.1,0.1,1)="P", manual)"
+E: data value estimated by interpolation
+
+Example code if there were problematic flags (e.g., "I" for impossible):
+1- Finding where in the dataframes problem flags come in so we can fix their corresponding values (if necessary) 
+values_to_remove <- c("M", "I")
+
+2- Filter data frame
+filtered_Primet2014_2024_filled <- Primet2014_2024_filled[!rowSums(sapply(Primet2014_2024_filled, function(x) x %in% values_to_remove | is.na(x))) > 0, ]
+
+3- Filtering flags after searching in R environment object where flags show up 
+Primet2014_2024_sorted_filled$SWC_MEAN_0_100_04[P230long_filled$Flag_SWC_MEAN_0_100_04=="Q"] <- NA
+```
+
+#Plotting AVG dendro value for 309
 ```{r}
-primet_226_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2021.csv", na.strings="NaN")
-primet_226_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2022.csv", na.strings="NaN")
-primet_226_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_226_a_5min_2023.csv", na.strings="NaN")
+dscmet_422_all$Dend309 <- dscmet_422_all$DEND309_AVG_4200_0_01 
 
-#Combining into one dataframe (bind_rows because col names change in 2019)
-P226long <- bind_rows(
-  primet_226_a_5min_2014,
-  primet_226_a_5min_2015,
-  primet_226_a_5min_2016,
-  primet_226_a_5min_2017,
-  primet_226_a_5min_2018,
-  primet_226_a_5min_2019,
-  primet_226_a_5min_2020,
-  primet_226_a_5min_2021,
-  primet_226_a_5min_2022,
-  primet_226_a_5min_2023)
+ggplot(dscmet_422_all ,aes(x=temp,y=VPD,color=factor(yr)))+
+  geom_point(size=1,alpha=0.5)+labs(title="HJA Air Temperature vs. VPD",x="Air Temperature (deg. C)",y="VPD (kpa)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
 ```
 
-```{r}
-HQSWP2577ts<- read.csv("~/research2/TreeNetProc/TOMST/HQSWP/HQSWP_2577_ts_YMD.csv", stringsAsFactors = TRUE)
-HQSWP2577ts$value<-as.numeric(HQSWP2577ts$value)
-HQSWP2577ts$ts<-as.POSIXct(HQSWP2577ts$ts,format="%Y.%m.%d %H:%M",tz="GMT")
-HQSWP2577ts$ts<-parse_date_time(HQSWP2577ts$ts,orders=c("ymd","ymd HMS"))
-HQSWP2577ts$yr<-format(HQSWP2577ts$ts, "%Y")
-HQSWP2577ts$yr<-as.factor(HQSWP2577ts$yr)
-```
 
