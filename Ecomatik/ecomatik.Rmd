@@ -20,6 +20,29 @@ library(dendRoAnalyst)
 
 custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
 ```
+#Summary of what we're working with
+April 1 = DOY 91
+June 26 (Heat Dome onset) = DOY 177
+Oct 1 = DOY 274
+
+Dendro summary (653 is in dscmet but not usable): 
+309	Doug-fir (DT)
+310	Doug-fir
+311	Doug-fir
+646	Western hem
+648	Western hem
+!!!651 (no core) western red cedar
+652	Western hem
+!!!654 (no core...might have actually and mislabeled as 645)
+655	Doug-fir
+656	Doug-fir
+860	Doug-fir
+
+309 10 and 11 are old growth PSME
+860 654 655 and 656 are second growth PSME
+646 648 and 652 TSHE and 651 THPL are old growth
+
+
 #reading in each year of dendrometer values in DSCMET422
 ```{r}
 #each CSV 1st adjuTosted in Excel to remove non-header/data rows & format ts YMD
@@ -50,8 +73,8 @@ dscmet_422_all$ts<-dscmet_422_all$Date
 dscmet_422_all$yr<-format(dscmet_422_all$ts, "%Y")
 dscmet_422_all$yr<-as.factor(dscmet_422_all$yr)
 dscmet_422_all$DOY<-yday(dscmet_422_all$ts)
-write.csv(file="dscmet_422_all.csv",dscmet_422_all)
-save(dscmet_422_all,file="dscmet_422_all")
+#write.csv(file="dscmet_422_all.csv",dscmet_422_all)
+#save(dscmet_422_all,file="dscmet_422_all")
 #can recall this with load() without bringing in the CSV file  
 
 unique_422_strings <- unique(unlist(sapply(dscmet_422_all, function(x) x[is.character(x)])))
@@ -71,13 +94,511 @@ filtered_Primet2014_2024_filled <- Primet2014_2024_filled[!rowSums(sapply(Primet
 3- Filtering flags after searching in R environment object where flags show up 
 Primet2014_2024_sorted_filled$SWC_MEAN_0_100_04[P230long_filled$Flag_SWC_MEAN_0_100_04=="Q"] <- NA
 
-#Plotting AVG dendro value for 309
+#309 Plotting raw AVG dendro value for 309
 Ecomatik website says the DC series measures "high-precision and continuous measurement of changes in stem circumference"
+April 1 = DOY 91
+June 26 (Heat Dome onset) = DOY 177
+Oct 1 = DOY 274
 ```{r}
 dscmet_422_all$Dend309 <- dscmet_422_all$DEND309_AVG_4200_0_01 
 
-ggplot(dscmet_422_all ,aes(x=DOY,y=Dend309,color=factor(yr)))+
-  geom_point(size=1,alpha=0.5)+labs(title="HJA Douglas-fir (ID 309) Stem Circumference Changes",x="Day of Year",y="Stem Circumference Change (µm)",color="Legend") +   scale_color_manual(values = custom_colors) + guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+theme_minimal()
+#All days
+raw309all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend309,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 309) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw309all
+ggsave("raw309all.png", plot = raw309all)
+
+
+#Apr1-Oct1
+raw309gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend309,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 309) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(-2000,17500)
+raw309gro
+ggsave("raw309gro.png", plot = raw309gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
 ```
+
+#310 Plotting raw AVG dendro value for 310
+```{r}
+dscmet_422_all$Dend310 <- dscmet_422_all$DEND310_AVG_150_0_01 
+
+#All days
+raw310all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend310,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 310) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw310all
+ggsave("raw310all.png", plot = raw310all)
+
+
+#Apr1-Oct1
+raw310gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend310,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 310) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)
+raw310gro
+ggsave("raw310gro.png", plot = raw310gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#311 Plotting raw AVG dendro value for 311
+```{r}
+dscmet_422_all$Dend311 <- dscmet_422_all$DEND311_AVG_150_0_01 
+
+#All days
+raw311all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend311,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 311) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw311all
+ggsave("raw311all.png", plot = raw311all)
+
+
+#Apr1-Oct1
+raw311gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend311,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 311) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)#+ylim(-2000,17500)
+raw311gro
+ggsave("raw311gro.png", plot = raw311gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#646 Plotting raw AVG dendro value for 646
+```{r}
+dscmet_422_all$Dend646 <- dscmet_422_all$DEND646_AVG_150_0_01 
+wide646<-dscmet_422_all|>
+  select(c(Dend646,yr,ts,DOY))|>
+  pivot_wider(names_from = yr, values_from = Dend646)
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide646gro would normalize to DOY 91
+
+#recombine both years data frames into one. 
+wide646gro<-wide646
+growth2018<-wide646gro|>select(c(ts,DOY,'2018'))
+growth2019<-wide646gro|>select(c(ts,DOY,'2019'))
+growth2020<-wide646gro|>select(c(ts,DOY,'2020'))
+growth2021<-wide646gro|>select(c(ts,DOY,'2021'))
+growth2022<-wide646gro|>select(c(ts,DOY,'2022'))
+growth2023<-wide646gro|>select(c(ts,DOY,'2023'))
+growth2024<-wide646gro|>select(c(ts,DOY,'2024'))
+
+growth2018$`2018`<-growth2018$`2018` 
+growth2019$`2019`<-growth2019$`2019`- 3596
+growth2020$`2020`<-growth2020$`2020`- 8364
+growth2021$`2021`<-growth2021$`2021`- 14003
+growth2022$`2022`<-growth2022$`2022` - 5760
+growth2023$`2023`<-growth2023$`2023`- 7088
+growth2024$`2024`<-growth2024$`2024`- 11400
+
+wide646gro<-bind_rows(growth2018,growth2019,growth2020,growth2021,growth2022,growth2023,growth2024)
+long646grow<- wide646gro |>   pivot_longer(
+    cols = starts_with("20"),
+    names_to = "yr",  
+    values_to = "annual_growth")  
+
+
+ggplot(long646grow, aes(x=DOY,y=annual_growth,color=factor(yr))) + geom_point(
+  size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 646) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(-1000,6000)
+```
+
+
+#All days
+raw646all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend646,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 646) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw646all
+ggsave("raw646all.png", plot = raw646all)
+
+
+#Apr1-Oct1
+raw646gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend646,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 646) Stem Circumference Changes: A1-O1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(0,21000)
+raw646gro
+ggsave("raw646gro.png", plot = raw646gro)
+
+#normalized A1-O1
+
+
+norm646gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend646,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 646) Stem Circumference Changes: A1-O1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(0,21000)
+norm646gro
+ggsave("norm646gro.png", plot = norm646gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+
+#648 Plotting raw AVG dendro value for 648
+```{r}
+dscmet_422_all$Dend648 <- dscmet_422_all$DEND648_AVG_150_0_01 
+
+#All days
+raw648all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend648,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 648) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw648all
+ggsave("raw648all.png", plot = raw648all)
+
+
+#Apr1-Oct1
+raw648gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend648,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 648) Stem Circumference Changes: A1-O1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(4000,12500)
+raw648gro
+ggsave("raw648gro.png", plot = raw648gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#651 Plotting raw AVG dendro value for 651
+```{r}
+dscmet_422_all$Dend651 <- dscmet_422_all$DEND651_AVG_150_0_01 
+
+#All days
+raw651all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend651,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western red cedar (ID 651) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw651all
+ggsave("raw651all.png", plot = raw651all)
+
+
+#Apr1-Oct1
+raw651gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend651,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western red cedar (ID 651) Stem Circumference Changes: A1-O1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(0,12500)
+raw651gro
+ggsave("raw651gro.png", plot = raw651gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+
+
+```
+
+#652 Plotting raw AVG dendro value for 652
+```{r}
+dscmet_422_all$Dend652 <- dscmet_422_all$DEND652_AVG_150_0_01 
+
+#All days
+raw652all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend652,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 652) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )
+raw652all
+ggsave("raw652all.png", plot = raw652all)
+
+
+#Apr1-Oct1
+raw652gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend652,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA western hemlock (ID 652) Stem Circumference Changes: A1-O1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(5000,14000)
+raw652gro
+ggsave("raw652gro.png", plot = raw652gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#654 Plotting raw AVG dendro value for 654
+```{r}
+dscmet_422_all$Dend654 <- dscmet_422_all$DEND654_AVG_150_0_01 
+
+#All days
+raw654all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend654,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 654) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+ylim(0,17500)
+#ylim here because early 2018 has garbage numbers that are big outliers
+raw654all
+ggsave("raw654all.png", plot = raw654all)
+
+
+#Apr1-Oct1
+raw654gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend654,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 654) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(0,17500)
+raw654gro
+ggsave("raw654gro.png", plot = raw654gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#655 Plotting raw AVG dendro value for 655
+```{r}
+dscmet_422_all$Dend655 <- dscmet_422_all$DEND655_AVG_150_0_01 
+
+#All days
+raw655all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend655,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 655) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+ylim(0,22500)
+raw655all
+ggsave("raw655all.png", plot = raw655all)
+
+
+#Apr1-Oct1
+raw655gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend655,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 655) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(1500,22500)
+raw655gro
+ggsave("raw655gro.png", plot = raw655gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#656 Plotting raw AVG dendro value for 656
+```{r}
+dscmet_422_all$Dend656 <- dscmet_422_all$DEND656_AVG_150_0_01 
+
+#All days
+raw656all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend656,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 656) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+ylim(0,20000)
+raw656all
+ggsave("raw656all.png", plot = raw656all)
+
+
+#Apr1-Oct1
+raw656gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend656,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 656) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(0,20000)
+raw656gro
+ggsave("raw656gro.png", plot = raw656gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+#860 Plotting raw AVG dendro value for 860
+```{r}
+dend860<-dscmet_422_all$Dend860
+dscmet_422_all$Dend860 <- dscmet_422_all$DEND860_AVG_150_0_01 
+
+#All days
+raw860all <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend860,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 860) Stem Circumference Changes",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+ylim(0,20000)
+raw860all
+ggsave("raw860all.png", plot = raw860all)
+
+
+#Apr1-Oct1
+raw860gro <- ggplot(
+  dscmet_422_all,aes(x=DOY,y=Dend860,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 860) Stem Circumference Changes: April 1 - Oct 1",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
+                )+xlim(91,274)+ylim(0,20000)
+raw860gro
+ggsave("raw860gro.png", plot = raw860gro)
+
+#+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
