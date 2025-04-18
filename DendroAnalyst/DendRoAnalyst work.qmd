@@ -12,39 +12,94 @@ library(readr)
 library(viridis)
 library(tidyr)
 library(lubridate)
+library(here)
 library(zoo)
 library(tidyverse)
 library(dendRoAnalyst)
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
+
+#keep getting errors with logical and character vectors mixing with remarks= so let's patch the code locally with getAnywhere(daily.data)
+daily.data.patched<-function (df, TreeNum) 
+{
+    if (TreeNum > ncol(df) - 1) {
+        stop("The tree number is not valid for provided dataset.")
+    }
+    TIME <- DATE <- dm <- time <- Max <- Min <- Time_max <- Time_min <- NULL
+    tn <- TreeNum + 1
+    if (!inherits(df[[1]], "Date") && !inherits(df[[1]], "POSIXct")) {
+        df[[1]] <- ymd_hms(df[[1]])
+    }
+    df <- tibble(df) %>% select(c(1, all_of(tn)))
+    df <- df %>% rename(TIME = 1, dm = 2) %>% mutate(DATE = as.Date(TIME), 
+        time = format(TIME, "%H:%M:%S"))
+    result <- df %>% group_by(DATE) %>% summarize(Min = min(dm, 
+        na.rm = T), Time_min = time[which.min(dm)], Max = max(dm, 
+        na.rm = T), Time_max = time[which.max(dm)], mean = mean(dm, 
+        na.rm = T), median = median(dm, na.rm = T), amplitude = Max - 
+        Min, Remarks = ifelse(isTRUE(Time_max > Time_min), "*", ""))
+    return(result)
+}
 ```
 
-## Help Pages & Function Information
+# Help Pages & Function Information
 
-|  |  |
-|----|----|
-| [clim.twd](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/clim.twd.html) | Calculating relative growth change during no-rain periods. |
-| [daily.data](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/daily.data.html) | Calculation of daily statistics for dendrometer data |
-| [dendro.resample](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.resample.html) | Resampling temporal resolution of dendrometer and climate data |
-| [dendro.truncate](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.truncate.html) | Truncation of the dendrometer data |
-| [dm.detrend](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.detrend.html) | Detrend the dendrometer data |
-| [dm.fit.gompertz](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.fit.gompertz.html) | Fitting gompertz function on annual dendrometer data |
-| [dm.na.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.na.interpolation.html) | Detection and interpolation of missing values in dendrometer data. |
-| [gf_nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/gf_nepa17.html) | Dendrometer data of Kathmandu for 2017 with gap filled |
-| [i.jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/i.jump.locator.html) | Removing artefacts due to manual adjustments of dendrometers interactively |
-| [jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/jump.locator.html) | Removing artefacts due to manual adjustments of dendrometers automatically for more than one dendrometers |
-| [ktm_rain17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/ktm_rain17.html) | Daily rainfall data of Kathmandu for 2017. |
-| [mean_detrended.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mean_detrended.dm.html) | Calculate mean of detrended dendrometer data. |
-| [mov.cor.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mov.cor.dm.html) | Calculating running correlation between dendrometer data and daily climate. |
-| [nepa](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa.html) | Dendrometer data from Kathmandu |
-| [nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa17.html) | Dendrometer data of Kathmandu for 2017 |
-| [nepa2](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa2.html) | Dendrometer data from Kathmandu version 2 |
-| [network.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/network.interpolation.html) | Interpolation of NA values using the dendrometer network |
-| [phase.sc](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.sc.html) | Application of the stem-cycle approach to calculate different phases, their duration and to plot them. |
-| [phase.zg](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.zg.html) | Application of the zero-growth approach to calculate different phases, their duration and to plot them. |
-| [plot_mov.cor](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_mov.cor.html) | Plotting moving correlation with climate. |
-| [plot_SC_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_SC_output.html) | Plotting output of stem cycle approach (i.e., output of phase.sc function). |
-| [plot_ZG_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_ZG_output.html) | Plotting output of zero-growth approach (i.e., output of phase.zg function). |
-| [read.dendrometer](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/read.dendrometer.html) | Reading dendrometer data. |
-| [twd.maxima](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/twd.maxima.html) | Locating the maxima of TWD periods |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [clim.twd](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/clim.twd.html)                                                                                                                                                                                                                                                                                             | **Calculating relative growth change during no-rain periods. Requires dendrometer (e.g., nepa17) and rainfall (e.g., rain17) data.**       |
+|                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                                                            |
+| Description from ?clim.twd:                                                                                                                                                                                                                                                                                                                                                  | E.g. from package:                                                                                                                         |
+|                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                                                            |
+| This function calculates the number and the location of climatically adverse periods within a climate time series. The user can define a duration and threshold of these conditions. The function also provides the relative radial/circumferencial change during each adverse period for the original or normalized data. See Raffelsbauer et al., (2019) for more details. | relative_dry_growth\<-clim.twd(df=gf_nepa17, Clim=ktm_rain17, dailyValue='max', showPlot=TRUE) \[1\]                                       |
+|                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                                                            |
+|                                                                                                                                                                                                                                                                                                                                                                              | Output: "The adverse climatic periods are listed below:" start_doy, end_doy, Id,                                                           |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [daily.data](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/daily.data.html)                                                                                                                                                                                                                                                                                         | Calculation of **daily statistics for dendrometer data**                                                                                   |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [dendro.resample](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.resample.html)                                                                                                                                                                                                                                                                               | Resampling temporal resolution of dendrometer and climate data                                                                             |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [dendro.truncate](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dendro.truncate.html)                                                                                                                                                                                                                                                                               | Truncation of the dendrometer data                                                                                                         |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [dm.detrend](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.detrend.html)                                                                                                                                                                                                                                                                                         | Detrend the dendrometer data                                                                                                               |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [dm.fit.gompertz](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.fit.gompertz.html)                                                                                                                                                                                                                                                                               | Fitting gompertz function on annual dendrometer data                                                                                       |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [dm.na.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/dm.na.interpolation.html)                                                                                                                                                                                                                                                                       | Detection and **interpolation of missing values** in dendrometer data.                                                                     |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [gf_nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/gf_nepa17.html)                                                                                                                                                                                                                                                                                           | Dendrometer data of Kathmandu for 2017 with gap filled                                                                                     |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [i.jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/i.jump.locator.html)                                                                                                                                                                                                                                                                                 | Removing artefacts due to manual adjustments of dendrometers interactively                                                                 |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [jump.locator](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/jump.locator.html)                                                                                                                                                                                                                                                                                     | **Removing artefacts due to manual adjustments of dendrometers automatically for more than one dendrometers**                              |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [ktm_rain17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/ktm_rain17.html)                                                                                                                                                                                                                                                                                         | Daily rainfall data of Kathmandu for 2017.                                                                                                 |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [mean_detrended.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mean_detrended.dm.html)                                                                                                                                                                                                                                                                           | Calculate mean of detrended dendrometer data.                                                                                              |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [mov.cor.dm](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/mov.cor.dm.html)                                                                                                                                                                                                                                                                                         | **Calculating running correlation between dendrometer data and daily climate.**                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [nepa](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa.html)                                                                                                                                                                                                                                                                                                     | Dendrometer data from Kathmandu                                                                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [nepa17](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa17.html)                                                                                                                                                                                                                                                                                                 | Dendrometer data of Kathmandu for 2017                                                                                                     |
+|                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                                                            |
+|                                                                                                                                                                                                                                                                                                                                                                              | from the paper: "The data was derived using an automatic logging band dendrometer (DRL26, EMS Brno) recording hourly circumference change" |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [pa2](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/nepa2.html)                                                                                                                                                                                                                                                                                                     | Dendrometer data from Kathmandu version 2                                                                                                  |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [network.interpolation](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/network.interpolation.html)                                                                                                                                                                                                                                                                   | Interpolation of NA values using the dendrometer network                                                                                   |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [phase.sc](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.sc.html)                                                                                                                                                                                                                                                                                             | **Application of the stem-cycle approach to calculate different phases, their duration and to plot them.**                                 |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [phase.zg](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/phase.zg.html)                                                                                                                                                                                                                                                                                             | **Application of the zero-growth approach to calculate different phases, their duration and to plot them.**                                |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [plot_mov.cor](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_mov.cor.html)                                                                                                                                                                                                                                                                                     | **Plotting moving correlation with climate.**                                                                                              |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [plot_SC_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_SC_output.html)                                                                                                                                                                                                                                                                                 | **Plotting output of stem cycle approach (i.e., output of phase.sc function).**                                                            |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [plot_ZG_output](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/plot_ZG_output.html)                                                                                                                                                                                                                                                                                 | **Plotting output of zero-growth approach (i.e., output of phase.zg function).**                                                           |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [read.dendrometer](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/read.dendrometer.html)                                                                                                                                                                                                                                                                             | **Reading dendrometer data and automatically converts datetime format to what is needed.**                                                 |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+| [twd.maxima](http://127.0.0.1:42961/help/library/dendRoAnalyst/html/twd.maxima.html)                                                                                                                                                                                                                                                                                         | **Locating the maxima of TWD periods**                                                                                                     |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------+
 
 -   The ‘phase.sc’ and ‘phase.zg’ only calculate the phases and phase statistics.
 
@@ -62,18 +117,77 @@ library(dendRoAnalyst)
 
 -   A new function ‘mov.cor.dm’ is added for calculating climate-growth relationships.
 
--   
+# Dend 309 (discovery tree)
 
--   
+## Loading in and prepping data
 
--   
+Example data for DendRoAnalyst has hourly dendrometer data and daily rainfall data, so we will be condensing our data down to match.
+
+```{r}
+#dendrometer data
+#JUST 309 FOR NOW, NO FIXED RESETS
+here(file="dscmet_422_all.RData") #calling saved R object from ecomatik.rmd
+#checking bad flags - no bad ones found
+unique_422_strings <- unique(
+  unlist(
+    sapply(
+      dscmet_422_all, function(x) x[is.character(x)])))
+#getting hourly averages
+dscmet_422_all$hour <- format(
+  dscmet_422_all$Date, "%Y-%m-%d %H:00:00")
+dscmet_422_all$hour<-as.POSIXct(dscmet_422_all$hour)
+
+#309 - OG DF
+d309_hourly <- dscmet_422_all |> 
+  group_by(hour) |> 
+  summarise(hourly_avg309 = mean(DEND309_AVG_4200_0_01))
+#310 - OG DF
+d310_hourly <- dscmet_422_all |> 
+  group_by(hour) |> 
+  summarise(hourly_avg309 = mean(DEND310_AVG_150_0_01))  
+#311 - OG DF
+d311_hourly <- dscmet_422_all |> 
+  group_by(hour) |> 
+  summarise(hourly_avg311 = mean(DEND311_AVG_150_0_01))  
+
+
+#rainfall data (from climate comparisons updated.rmd)
+here(file="P230long.RData")
+here(file="P230.RData")
+
+#daily rain averages
+P230_rain<-P230_df|>select(c(Date,PRECIP_TOT_100_0_01,Flag_PRECIP_TOT_100_0_01))
+unique_rain_strings <- unique(
+  unlist(
+    sapply(
+      P230_rain, function(x) x[is.character(x)])))
+values_to_remove <- c("Q", "QQ")
+
+# Filter data frame
+filtered_P230_rain <- P230_rain[!rowSums(sapply(P230_rain, function(x) x %in% values_to_remove | is.na(x))) > 0, ]
+#checking that it worked 
+unique_filtered_rain_strings <- unique(
+  unlist(
+    sapply(
+      filtered_P230_rain, function(x) x[is.character(x)])))
+#daily totals
+filtered_P230_rain$day <- format(
+  filtered_P230_rain$Date, "%Y-%m-%d")
+filtered_P230_rain_daily <- filtered_P230_rain |> 
+  group_by(day) |> 
+  summarise(daily_rain_sum = sum(PRECIP_TOT_100_0_01))
+```
+
+## Prepping objects following protocols from DendRoAnalyst vignette
+
+# Plugging in 309 to example code
 
 ```{r}
 #For plain text (.txt), comma separated (.csv) and excel (.xlsx) format:
 
 df <- read.dendrometer("nepa.txt")
 
-
+read.den
  pkgname <- "dendRoAnalyst"
  source(file.path(R.home("share"), "R", "examples-header.R"))
  options(warn = 1)
@@ -94,9 +208,7 @@ df <- read.dendrometer("nepa.txt")
  ### ** Examples
  
  library(dendRoAnalyst)
- data(gf_nepa17)
-> data(ktm_rain17)
-> relative_dry_growth<-clim.twd(df=gf_nepa17, Clim=ktm_rain17, dailyValue='max', showPlot=TRUE)
+relative_dry_growth<-clim.twd(df=d309_hourly, Clim=filtered_P230_rain_daily, dailyValue='max', showPlot=TRUE)
 [1] "The adverse climatic periods are listed below:"
    start_doy end_doy  Id
 1          5      15   1
@@ -156,10 +268,31 @@ Read 1 item
 > 
 > ### ** Examples
 > 
-> library(dendRoAnalyst)
-> data(nepa17)
-> daily_stats<-daily.data(df=nepa17, TreeNum=1)
-> head(daily_stats,10)
+
+#keep getting errors with logical and character vectors mixing and making issues so let's patch the code locally with getAnywhere(daily.data)
+daily.data.patched<-function (df, TreeNum) 
+{
+    if (TreeNum > ncol(df) - 1) {
+        stop("The tree number is not valid for provided dataset.")
+    }
+    TIME <- DATE <- dm <- time <- Max <- Min <- Time_max <- Time_min <- NULL
+    tn <- TreeNum + 1
+    if (!inherits(df[[1]], "Date") && !inherits(df[[1]], "POSIXct")) {
+        df[[1]] <- ymd_hms(df[[1]])
+    }
+    df <- tibble(df) %>% select(c(1, all_of(tn)))
+    df <- df %>% rename(TIME = 1, dm = 2) %>% mutate(DATE = as.Date(TIME), 
+        time = format(TIME, "%H:%M:%S"))
+    result <- df %>% group_by(DATE) %>% summarize(Min = min(dm, 
+        na.rm = T), Time_min = time[which.min(dm)], Max = max(dm, 
+        na.rm = T), Time_max = time[which.max(dm)], mean = mean(dm, 
+        na.rm = T), median = median(dm, na.rm = T), amplitude = Max - 
+        Min, Remarks = ifelse(isTRUE(Time_max > Time_min), "*", ""))
+    return(result)
+}
+daily_stats309<-daily.data.patched(df=d309_hourly, TreeNum=1)
+head(daily_stats,10)
+
    DOY      min Time_Minimum      max Time_Maximum     mean   median  amplitude
 1    1 62.26459     00:00:00 62.46939     08:00:00 62.42616 62.45317 0.20480347
 2    2 62.46697     14:00:00 62.54298     08:00:00 62.49773 62.48827 0.07601166
@@ -537,4 +670,527 @@ null device
 > quit('no')
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+# Plotting amplitude (max-min) from daily.data.patched
+
+```{r}
+# 309
+daily_stats309<-daily.data.patched(df=d309_hourly, TreeNum=1)
+daily_stats309$yr <- format(
+  daily_stats309$DATE, "%Y")
+daily_stats309$yr<-as.factor(daily_stats309$yr)
+daily_stats309$DOY<-yday(daily_stats309$DATE)
+raw309amp <- ggplot(
+  daily_stats309,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
+      title="HJA Douglas-fir (ID 309) Daily Net Circumference Change",
+      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,900)+xlim(91,274)
+raw309amp
+
+# 310
+daily_stats310<-daily.data.patched(df=d310_hourly, TreeNum=1)
+daily_stats310$yr <- format(
+  daily_stats310$DATE, "%Y")
+daily_stats310$yr<-as.factor(daily_stats310$yr)
+daily_stats310$DOY<-yday(daily_stats310$DATE)
+raw310amp <- ggplot(
+  daily_stats310,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
+      title="HJA Douglas-fir (ID 310) Daily Net Circumference Change",
+      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,550)+xlim(91,274)
+raw310amp
+
+# 311
+daily_stats311<-daily.data.patched(df=d311_hourly, TreeNum=1)
+daily_stats311$yr <- format(
+  daily_stats311$DATE, "%Y")
+daily_stats311$yr<-as.factor(daily_stats311$yr)
+daily_stats311$DOY<-yday(daily_stats311$DATE)
+raw311amp <- ggplot(
+  daily_stats311,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
+      title="HJA Douglas-fir (ID 311) Daily Net Circumference Change",
+      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,625)+xlim(91,274)
+raw311amp
+```
+
+# Relative Dry Growth During Climate Adverse events
+
+```{r}
+ library(dendRoAnalyst)
+relative_dry_growth309<-clim.twd(
+  df=d309_hourly, 
+  Clim=filtered_P230_rain_daily, 
+  dailyValue='mean', 
+  thresholdClim = "<1",
+  thresholdDays = ">10",
+  showPlot=TRUE)
+head(relative_dry_growth309) 
+
+
+daily_stats309<-daily.data.patched(df=d309_hourly, TreeNum=1)
+head(daily_stats,10)
+
+   DOY      min Time_Minimum      max Time_Maximum     mean   median  amplitude
+1    1 62.26459     00:00:00 62.46939     08:00:00 62.42616 62.45317 0.20480347
+2    2 62.46697     14:00:00 62.54298     08:00:00 62.49773 62.48827 0.07601166
+3    3 62.52023     00:00:00 62.76301     15:00:00 62.64272 62.62457 0.24278260
+4    4 62.58774     17:00:00 62.82547     08:00:00 62.71532 62.75405 0.23772812
+5    5 62.60904     15:00:00 62.75768     09:00:00 62.66623 62.64826 0.14863968
+6    6 62.54610     17:00:00 62.74558     09:00:00 62.65189 62.65746 0.19947815
+7    7 62.60953     15:00:00 62.71314     08:00:00 62.65300 62.64148 0.10361099
+8    8 62.52673     17:00:00 62.72718     08:00:00 62.63242 62.64923 0.20044708
+9    9 62.54465     17:00:00 62.71072     08:00:00 62.62954 62.62405 0.16606903
+10  10 62.52867     16:00:00 62.70007     08:00:00 62.61818 62.62042 0.17139435
+
+
+
+# To resample monthly with maximum value
+resample_M<-dendro.resample(df=nepa17[,1:2], by='M', value='max')
+head(resample_M,10)
+         Time       T2
+1  2017-01-01 63.90855
+2  2017-02-01 64.88705
+3  2017-03-01 67.17670
+> 
+
+> data(nepa)
+> #Extracting data from doy 20 to 50 in 2017.
+> trunc1<-dendro.truncate(df=nepa, CalYear=2017, DOY=c(20,50))
+> head(trunc1,10)
+                  Time       T2       T3
+1  2017-01-20 00:00:00 64.92424 48.87772
+2  2017-01-20 01:00:00 64.93150 48.87918
+3  2017-01-20 02:00:00 64.93634 48.87966
+4  2017-01-20 03:00:00 64.94021 48.88062
+5  2017-01-20 04:00:00 64.94602 48.88305
+6  2017-01-20 05:00:00 64.95280 48.88305
+7  2017-01-20 06:00:00 64.95910 48.88208
+8  2017-01-20 07:00:00 64.96249 48.88547
+9  2017-01-20 08:00:00 64.96636 48.88498
+10 2017-01-20 09:00:00 64.96733 48.88450
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("jump.locator")
+> ### * jump.locator
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: jump.locator
+> ### Title: Removing artefacts due to manual adjustments of dendrometers
+> ### Aliases: jump.locator
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(nepa)
+jump_free_nepa<-jump.locator(df=nepa, TreeNum=1 ,v=1)
+[1] "The jump(s) in dendrometer data:"
+  Location Time                  Difference
+1 "6000"   "2017-01-09 17:00:00" "1.993"   
+2 "9000"   "2017-05-14 17:00:00" "-2.753"  
+Press [enter] to continue
+Press [enter] to adjust this jump
+Press [enter] to continue
+Press [enter] to adjust this jump
+Press [enter] to continue
+Done!!!> head(jump_free_nepa,10)
+                  Time       T2
+1  2016-05-04 18:00:00 47.61461
+2  2016-05-04 19:00:00 47.67029
+3  2016-05-04 20:00:00 47.76567
+4  2016-05-04 21:00:00 47.83297
+5  2016-05-04 22:00:00 47.86202
+6  2016-05-04 23:00:00 47.93174
+7  2016-05-05 00:00:00 47.97241
+8  2016-05-05 01:00:00 48.05181
+9  2016-05-05 02:00:00 48.10701
+10 2016-05-05 03:00:00 48.13606
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("network.interpolation")
+> ### * network.interpolation
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: network.interpolation
+> ### Title: Interpolation of NA values using the dendrometer network
+> ### Aliases: network.interpolation
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data("gf_nepa17")
+> df1<-gf_nepa17
+> # Creating an artificial reference dataset.
+> df2<-cbind(gf_nepa17,gf_nepa17[,2:3],gf_nepa17[,2:3])
+> # Creating gaps in dataset by replacing some of the reading with NA in dataset.
+> df1[40:50,3]<-NA
+> # Using proportional interpolation method.
+> df1_NI<-network.interpolation(df=df1, referenceDF=df2, niMethod='proportional')
+Warning in norm.inter(t, adj.alpha) :
+  extreme order statistics used as endpoints
+[1] "Interpolation in T3"
+         Time Interpolated_value    LCI95    UCI95
+1  1483369200           48.31525 48.30600 48.32141
+2  1483372800           48.31522 48.31331 48.31585
+3  1483376400           48.31533 48.31447 48.31590
+4  1483380000           48.31441 48.31387 48.31459
+5  1483383600           48.31618 48.31554 48.31662
+6  1483387200           48.31777 48.31693 48.31833
+7  1483390800           48.31887 48.31852 48.31899
+8  1483394400           48.31759 48.31438 48.31974
+9  1483398000           48.32877 48.32534 48.32991
+10 1483401600           48.33870 48.33216 48.34088
+11 1483405200           48.34766 48.34015 48.35016
+> head(df1_NI,10)
+                  Time       T2       T3
+1  2017-01-01 00:00:00 62.26459 48.16801
+2  2017-01-01 01:00:00 62.27330 48.16559
+3  2017-01-01 02:00:00 62.30913 48.16269
+4  2017-01-01 03:00:00 62.34835 48.16414
+5  2017-01-01 04:00:00 62.37740 48.16269
+6  2017-01-01 05:00:00 62.42001 48.16705
+7  2017-01-01 06:00:00 62.44954 48.16801
+8  2017-01-01 07:00:00 62.46407 48.18302
+9  2017-01-01 08:00:00 62.46939 48.20869
+10 2017-01-01 09:00:00 62.46552 48.21498
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("phase.sc")
+> ### * phase.sc
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: phase.sc
+> ### Title: Application of the stem-cycle approach to calculate different
+> ###   phases, their duration and to plot them.
+> ### Aliases: phase.sc
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(gf_nepa17)
+> sc.phase<-phase.sc(df=gf_nepa17, TreeNum=1, smoothing=12, outputplot=TRUE, days=c(150,160))
+> head(sc.phase[[1]],10)
+   Phases               start                 end Duration_m Duration_h
+2       3 2017-01-01 01:00:00 2017-01-01 10:00:00        540          9
+3       1 2017-01-01 10:00:00 2017-01-01 16:00:00        360          6
+4       2 2017-01-01 16:00:00 2017-01-01 21:00:00        300          5
+5       3 2017-01-01 21:00:00 2017-01-02 09:00:00        720         12
+6       1 2017-01-02 09:00:00 2017-01-02 18:00:00        540          9
+7       2 2017-01-02 18:00:00 2017-01-03 01:00:00        420          7
+8       3 2017-01-03 01:00:00 2017-01-04 09:00:00       1920         32
+9       1 2017-01-04 09:00:00 2017-01-04 20:00:00        660         11
+10      2 2017-01-04 20:00:00 2017-01-05 09:00:00        780         13
+11      1 2017-01-05 09:00:00 2017-01-05 19:00:00        600         10
+     magnitude       rate DOY
+2   0.20092774  22.325304   1
+3  -0.00968170  -1.613617   1
+4   0.00920104   1.840208   1
+5   0.07794953   6.495794   1
+6  -0.06003571  -6.670634   2
+7   0.03727722   5.325317   2
+8   0.30524064   9.538770   3
+9  -0.22417069 -20.379154   4
+10  0.15009308  11.545622   4
+11 -0.13653564 -13.653564   5
+> head(sc.phase[[2]],10)
+                  Time Phases
+1  2017-01-01 00:00:00     NA
+2  2017-01-01 01:00:00      3
+3  2017-01-01 02:00:00      3
+4  2017-01-01 03:00:00      3
+5  2017-01-01 04:00:00      3
+6  2017-01-01 05:00:00      3
+7  2017-01-01 06:00:00      3
+8  2017-01-01 07:00:00      3
+9  2017-01-01 08:00:00      3
+10 2017-01-01 09:00:00      3
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("phase.zg")
+> ### * phase.zg
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: phase.zg
+> ### Title: Application of the zero-growth approach to calculate different
+> ###   phases, their duration and to plot them.
+> ### Aliases: phase.zg
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(gf_nepa17)
+> zg.phase<-phase.zg(df=gf_nepa17, TreeNum=1, outputplot=TRUE, days=c(150,160))
+> head(zg.phase[[1]],10)
+   DOY Phases               start                 end Duration_h  magnitude
+2    1    GRO 2017-01-01 01:00:00 2017-01-01 09:00:00          8 0.20480347
+3    2    TWD 2017-01-01 09:00:00 2017-01-02 00:00:00         15         NA
+4    2    GRO 2017-01-02 00:00:00 2017-01-02 09:00:00          9 0.07843399
+5    3    TWD 2017-01-02 09:00:00 2017-01-03 02:00:00         17         NA
+6    3    GRO 2017-01-03 02:00:00 2017-01-03 09:00:00          7 0.08376312
+7    3    TWD 2017-01-03 09:00:00 2017-01-03 14:00:00          5         NA
+8    3    GRO 2017-01-03 14:00:00 2017-01-03 16:00:00          2 0.20695114
+9    4    TWD 2017-01-03 16:00:00 2017-01-04 02:00:00         10         NA
+10   4    GRO 2017-01-04 02:00:00 2017-01-04 09:00:00          7 0.06681443
+11  19    TWD 2017-01-04 09:00:00 2017-01-19 07:00:00        358         NA
+         rate    Max.twd        Max.twd.time    Avg.twd     STD.twd
+2   25.600434         NA                <NA>         NA          NA
+3          NA 0.02239036 2017-01-01 13:00:00 0.01202655 0.007116119
+4    8.714888         NA                <NA>         NA          NA
+5          NA 0.08036932 2017-01-02 15:00:00 0.04966725 0.026681632
+6   11.966160         NA                <NA>         NA          NA
+7          NA 0.10906537 2017-01-03 14:00:00 0.03992748 0.042127223
+8  103.475570         NA                <NA>         NA          NA
+9          NA 0.06611217 2017-01-03 18:00:00 0.03600277 0.020475713
+10   9.544919         NA                <NA>         NA          NA
+11         NA 0.81116102 2017-01-18 19:00:00 0.43560431 0.169233890
+> head(zg.phase[[2]],10)
+                  Time Phases         TWD
+1  2017-01-01 00:00:00   <NA> 0.008712770
+2  2017-01-01 01:00:00    GRO 0.000000000
+3  2017-01-01 02:00:00    GRO 0.000000000
+4  2017-01-01 03:00:00    GRO 0.000000000
+5  2017-01-01 04:00:00    GRO 0.000000000
+6  2017-01-01 05:00:00    GRO 0.000000000
+7  2017-01-01 06:00:00    GRO 0.000000000
+8  2017-01-01 07:00:00    GRO 0.000000000
+9  2017-01-01 08:00:00    GRO 0.000000000
+10 2017-01-01 09:00:00    TWD 0.003905771
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("spline.interpolation")
+> ### * spline.interpolation
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: spline.interpolation
+> ### Title: Detection and spline interpolation of missing values in
+> ###   dendrometer data.
+> ### Aliases: spline.interpolation
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(nepa17)
+> gf_nepa17<-spline.interpolation(df=nepa17, resolution=60)
+  Missing.location.after Number.of.consecutive.missings
+1    2017-08-26 18:00:00                              4
+2    2017-08-27 21:00:00                              3
+Done!!!
+> head(gf_nepa17,10)
+                  Time       T2       T3
+1  2017-01-01 00:00:00 62.26459 48.16801
+2  2017-01-01 01:00:00 62.27330 48.16559
+3  2017-01-01 02:00:00 62.30913 48.16269
+4  2017-01-01 03:00:00 62.34835 48.16414
+5  2017-01-01 04:00:00 62.37740 48.16269
+6  2017-01-01 05:00:00 62.42001 48.16705
+7  2017-01-01 06:00:00 62.44954 48.16801
+8  2017-01-01 07:00:00 62.46407 48.18302
+9  2017-01-01 08:00:00 62.46939 48.20869
+10 2017-01-01 09:00:00 62.46552 48.21498
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("twd.maxima")
+> ### * twd.maxima
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: twd.maxima
+> ### Title: Locating the maxima of TWD periods
+> ### Aliases: twd.maxima
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(gf_nepa17)
+> df1=gf_nepa17[2500:3500,]
+> twd_max<-twd.maxima(df=df1, TreeNum=2, showPlot=FALSE)
+> head(twd_max,10)
+             start.time            end.time                Time         TWD
+20  2017-04-15 11:00:00 2017-04-16 04:00:00 2017-04-15 22:00:00 0.028245289
+43  2017-04-16 08:00:00 2017-04-18 06:00:00 2017-04-16 21:00:00 0.070221431
+65  2017-04-16 08:00:00 2017-04-18 06:00:00 2017-04-17 19:00:00 0.063032434
+89  2017-04-18 08:00:00 2017-04-19 06:00:00 2017-04-18 19:00:00 0.063130250
+113 2017-04-19 10:00:00 2017-04-20 00:00:00 2017-04-19 19:00:00 0.034571080
+128 2017-04-20 07:00:00 2017-04-20 11:00:00 2017-04-20 10:00:00 0.004259490
+135 2017-04-20 13:00:00 2017-04-20 22:00:00 2017-04-20 17:00:00 0.012007142
+158 2017-04-21 12:00:00 2017-04-21 21:00:00 2017-04-21 16:00:00 0.009391018
+183 2017-04-22 15:00:00 2017-04-22 18:00:00 2017-04-22 17:00:00 0.003387455
+207 2017-04-23 12:00:00 2017-04-24 00:00:00 2017-04-23 17:00:00 0.005701795
+    duration_from_start twd.number
+20                  540          1
+43                  660          2
+65                 1980          2
+89                  540          3
+113                 420          4
+128                  60          5
+135                 120          6
+158                 120          7
+183                   0          9
+207                 180         10
+> 
+> 
+> 
+> 
+> ### * <FOOTER>
+> ###
+> cleanEx()
+> options(digits = 7L)
+> base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+Time elapsed:  7.15 0.05 7.23 NA NA 
+> grDevices::dev.off()
+null device 
+          1 
+> ###
+> ### Local variables: ***
+> ### mode: outline-minor ***
+> ### outline-regexp: "\\(> \\)?### [*]+" ***
+> ### End: ***
+> quit('no')dy
+```
+
+# Removing artefacts from manual adjustments with jump.locator
+
+```{r}
+
+> ### Name: jump.locator
+> ### Title: Removing artefacts due to manual adjustments of dendrometers
+> ### Aliases: jump.locator
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(nepa)
+jump_free_nepa<-jump.locator(df=nepa, TreeNum=1 ,v=1)
+[1] "The jump(s) in dendrometer data:"
+  Location Time                  Difference
+1 "6000"   "2017-01-09 17:00:00" "1.993"   
+2 "9000"   "2017-05-14 17:00:00" "-2.753"  
+Press [enter] to continue
+Press [enter] to adjust this jump
+Press [enter] to continue
+Press [enter] to adjust this jump
+Press [enter] to continue
+Done!!!> head(jump_free_nepa,10)
+                  Time       T2
+1  2016-05-04 18:00:00 47.61461
+2  2016-05-04 19:00:00 47.67029
+3  2016-05-04 20:00:00 47.76567
+4  2016-05-04 21:00:00 47.83297
+5  2016-05-04 22:00:00 47.86202
+6  2016-05-04 23:00:00 47.93174
+7  2016-05-05 00:00:00 47.97241
+8  2016-05-05 01:00:00 48.05181
+9  2016-05-05 02:00:00 48.10701
+10 2016-05-05 03:00:00 48.13606
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("network.interpolation")
+> ### * network.interpolation
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: network.interpolation
+> ### Title: Interpolation of NA values using the dendrometer network
+> ### Aliases: network.interpolation
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data("gf_nepa17")
+> df1<-gf_nepa17
+> # Creating an artificial reference dataset.
+> df2<-cbind(gf_nepa17,gf_nepa17[,2:3],gf_nepa17[,2:3])
+> # Creating gaps in dataset by replacing some of the reading with NA in dataset.
+> df1[40:50,3]<-NA
+> # Using proportional interpolation method.
+> df1_NI<-network.interpolation(df=df1, referenceDF=df2, niMethod='proportional')
+Warning in norm.inter(t, adj.alpha) :
+  extreme order statistics used as endpoints
+[1] "Interpolation in T3"
+         Time Interpolated_value    LCI95    UCI95
+1  1483369200           48.31525 48.30600 48.32141
+2  1483372800           48.31522 48.31331 48.31585
+3  1483376400           48.31533 48.31447 48.31590
+4  1483380000           48.31441 48.31387 48.31459
+5  1483383600           48.31618 48.31554 48.31662
+6  1483387200           48.31777 48.31693 48.31833
+7  1483390800           48.31887 48.31852 48.31899
+8  1483394400           48.31759 48.31438 48.31974
+9  1483398000           48.32877 48.32534 48.32991
+10 1483401600           48.33870 48.33216 48.34088
+11 1483405200           48.34766 48.34015 48.35016
+> head(df1_NI,10)
+                  Time       T2       T3
+1  2017-01-01 00:00:00 62.26459 48.16801
+2  2017-01-01 01:00:00 62.27330 48.16559
+3  2017-01-01 02:00:00 62.30913 48.16269
+4  2017-01-01 03:00:00 62.34835 48.16414
+5  2017-01-01 04:00:00 62.37740 48.16269
+6  2017-01-01 05:00:00 62.42001 48.16705
+7  2017-01-01 06:00:00 62.44954 48.16801
+8  2017-01-01 07:00:00 62.46407 48.18302
+9  2017-01-01 08:00:00 62.46939 48.20869
+10 2017-01-01 09:00:00 62.46552 48.21498
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("phase.sc")
+> ### * phase.sc
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: phase.sc
+> ### Title: Application of the stem-cycle approach to calculate different
+> ###   phases, their duration and to plot them.
+> ### Aliases: phase.sc
+> 
+> ### ** Examples
+> 
+> library(dendRoAnalyst)
+> data(gf_nepa17)
+> sc.phase<-phase.sc(df=gf_nepa17, TreeNum=1, smoothing=12, outputplot=TRUE, days=c(150,160))
+> head(sc.phase[[1]],10)
+   Phases               start                 end Duration_m Duration_h
+2       3 2017-01-01 01:00:00 2017-01-01 10:00:00        540          9
+3       1 2017-01-01 10:00:00 2017-01-01 16:00:00        360          6
+4       2 2017-01-01 16:00:0
+```

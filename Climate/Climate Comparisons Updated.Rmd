@@ -13,7 +13,8 @@ library(readr)
 library(viridis)
 library(tidyr)
 library(lubridate)
-library(R.matlab)
+library(here)
+library(data.table)
 #atomspheric drought vs soil drought in 2021 vs other years to tease out effects of drought vs tree experience
 ```
 
@@ -197,46 +198,33 @@ P229Blong <- bind_rows(
 #Reading in/combining P230 
 (precip and SWC/Stemp) after manual formatting row names in Excel (removing units and putting row names at very top; formatting date to yyyy-mm-dd hh:mm:ss)
 ```{r}
-primet_230_a_5min_2014 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2014.csv", na.strings="NaN")
-primet_230_a_5min_2015 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2015.csv", na.strings="NaN")
-primet_230_a_5min_2016 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2016.csv", na.strings="NaN")
-primet_230_a_5min_2017 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2017.csv", na.strings="NaN")
-primet_230_a_5min_2018 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2018.csv", na.strings="NaN")
-primet_230_a_5min_2019 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2019.csv", na.strings="NaN")
-primet_230_a_5min_2020 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2020.csv", na.strings="NaN")
-primet_230_a_5min_2021 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2021.csv", na.strings="NaN")
-primet_230_a_5min_2022 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2022.csv", na.strings="NaN")
-primet_230_a_5min_2023 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2023.csv", na.strings="NaN")
-primet_230_a_5min_2024 <- read.csv("C:/Users/Gabby/Downloads/primet_230_a_5min_2024.csv", na.strings="NaN")
+setwd("C:/Users/Gabby/Desktop/GJ_OSU_Thesis/GJ_OSU_Thesis/")
 
+# combining files into a list
+file_paths <- c(
+  "Climate/primet/primet_230_a_5min_2015.csv",
+  "Climate/primet/primet_230_a_5min_2016.csv",
+  "Climate/primet/primet_230_a_5min_2017.csv",
+  "Climate/primet/primet_230_a_5min_2018.csv",
+  "Climate/primet/primet_230_a_5min_2019.csv",
+  "Climate/primet/primet_230_a_5min_2020.csv",
+  "Climate/primet/primet_230_a_5min_2021.csv",
+  "Climate/primet/primet_230_a_5min_2022.csv",
+  "Climate/primet/primet_230_a_5min_2023.csv",
+  "Climate/primet/primet_230_a_5min_2024.csv"
+  )
 
-#Combining into one dataframe - issue with combining logical and character vectors
-primet_230_a_5min_2014Ch <- primet_230_a_5min_2014 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2015Ch <- primet_230_a_5min_2015 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2016Ch <- primet_230_a_5min_2016 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2017Ch <- primet_230_a_5min_2017 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2018Ch <- primet_230_a_5min_2018 |> mutate(across(where(is.logical), as.character)) |> mutate(SOLAR_MAX_100_0_01 = as.character(SOLAR_MAX_100_0_01))
-primet_230_a_5min_2019Ch <- primet_230_a_5min_2019 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2020Ch <- primet_230_a_5min_2020 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2021Ch <- primet_230_a_5min_2021 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2022Ch <- primet_230_a_5min_2022 |> mutate(across(where(is.logical), as.character))
-primet_230_a_5min_2023Ch <- primet_230_a_5min_2023 |> mutate(across(where(is.logical), as.character))|> mutate(SWC_MEAN_0_20_02 = as.numeric(SWC_MEAN_0_20_02)) |> mutate(SWE_CHECK=as.character(SWE_CHECK))
-primet_230_a_5min_2024Ch <- primet_230_a_5min_2024 |> mutate(across(where(is.logical), as.character))|> mutate(SWC_MEAN_0_20_02 = as.numeric(SWC_MEAN_0_20_02)) |> mutate(SWE_CHECK=as.character(SWE_CHECK))
+# Reading all files into a list of data.tables
+data_list <- lapply(file_paths, fread)
 
+# Combining all data tables, filling missing columns and resolving type mismatches - this would not work if we tried bind_rows() instead 
+combined_data <- rbindlist(data_list, fill = TRUE)
 
-# Now use bind_rows
-P230long <- bind_rows(
-  primet_230_a_5min_2014Ch,
-  primet_230_a_5min_2015Ch,
-  primet_230_a_5min_2016Ch,
-  primet_230_a_5min_2017Ch,
-  primet_230_a_5min_2018Ch,
-  primet_230_a_5min_2019Ch,
-  primet_230_a_5min_2020Ch,
-  primet_230_a_5min_2021Ch,
-  primet_230_a_5min_2022Ch,
-  primet_230_a_5min_2023Ch,
-  primet_230_a_5min_2024Ch)
+# convert back to a df from a table
+P230_df <- as.data.frame(combined_data)
+
+#save as R object so we don't have to redo every time we want to recall the df
+save(P230_df,file=here("P230.RData"))
 ```
 
 #Reading in/combining P229B
@@ -1573,6 +1561,7 @@ HeatDome_plot_TvV<-ggplot(selectclimate_DandP_wide_ts21,aes(x=ts21)) +
   labs(title="HJA Stressors During 2021 Heat Dome",x="Date",y="Value (Deg. C or kpa)",color="Legend")+theme_minimal()+
   scale_x_datetime(limits = c(start_date, end_date))+
   scale_y_continuous(limits = c(-0.5,9),breaks=c(0,1,2,3,4,5,6,7,8,9),labels =c(0,1,2,3,4,5,6,7,8,9))+ guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))
+ggsave("raw309all.png", plot = p1)
 
 # Add vertical dashed line at a specific date
 
