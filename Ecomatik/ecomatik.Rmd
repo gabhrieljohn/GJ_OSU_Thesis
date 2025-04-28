@@ -74,8 +74,13 @@ dscmet_422_all$yr<-format(dscmet_422_all$ts, "%Y")
 dscmet_422_all$yr<-as.factor(dscmet_422_all$yr)
 dscmet_422_all$DOY<-yday(dscmet_422_all$ts)
 #write.csv(file="dscmet_422_all.csv",dscmet_422_all)
+<<<<<<< HEAD
 save(dscmet_422_all,file=here("DendroAnalyst/dscmet_422_all.RData"))
 #can recall this with load(dscmet_422_all.Rdata) without bringing in the CSV file  
+=======
+#save(dscmet_422_all,file="dscmet_422_all")
+#can recall this with load() without bringing in the CSV file  
+>>>>>>> 194700ce3d7724a3365c4861dcc5681d0327b8d0
 
 unique_422_strings <- unique(unlist(sapply(dscmet_422_all, function(x) x[is.character(x)])))
 ```
