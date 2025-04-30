@@ -18,7 +18,7 @@ library(dendRoAnalyst)
 #"GJ_OSU_Thesis" is the default WD when I first open the .RProj (at least it should be)
 
 
-custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "turquoise", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="coral")
+custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "lightblue", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="darkgreen")
 ```
 #Summary of what we're working with
 April 1 = DOY 91
@@ -74,14 +74,10 @@ dscmet_422_all$yr<-format(dscmet_422_all$ts, "%Y")
 dscmet_422_all$yr<-as.factor(dscmet_422_all$yr)
 dscmet_422_all$DOY<-yday(dscmet_422_all$ts)
 #write.csv(file="dscmet_422_all.csv",dscmet_422_all)
-<<<<<<< HEAD
 save(dscmet_422_all,file=here("DendroAnalyst/dscmet_422_all.RData"))
 #can recall this with load(dscmet_422_all.Rdata) without bringing in the CSV file  
-=======
 #save(dscmet_422_all,file="dscmet_422_all")
 #can recall this with load() without bringing in the CSV file  
->>>>>>> 194700ce3d7724a3365c4861dcc5681d0327b8d0
-
 unique_422_strings <- unique(unlist(sapply(dscmet_422_all, function(x) x[is.character(x)])))
 ```
 

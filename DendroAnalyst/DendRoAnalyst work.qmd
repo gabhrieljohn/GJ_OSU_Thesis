@@ -146,21 +146,50 @@ load(here(file="DendroAnalyst/dscmet_422_all.RData")) #calling saved R object fr
 #getting hourly averages - starting with adding an hour column
 dscmet_422_all$hour <- format(
   dscmet_422_all$Date, "%Y-%m-%d %H:00:00")
-dscmet_422_all$hour<-as.POSIXct(dscmet_422_all$hour)
+dscmet_422_all$Date<-as.POSIXct(dscmet_422_all$hour,format="%Y-%m-%d %H")
+#getting daily averages - starting with adding a day column
+dscmet_422_all$day <- format(
+  dscmet_422_all$Date, "%Y-%m-%d")
+dscmet_422_all$day<-as.POSIXct(dscmet_422_all$day,format="%Y-%m-%d")
 
-
-#309 - OG DF
+#309 - OG DF - need to check if these values are accurate
 d309_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
-  summarise(hourly_avg309 = mean(DEND309_AVG_4200_0_01))
+  summarise(value = mean(DEND309_AVG_4200_0_01,na.rm=TRUE))|>
+  filter(!is.nan(value))
+colnames(d309_hourly)[colnames(d309_hourly) == 'hour'] <- 'Date'
+
+d309_daily <- dscmet_422_all |> 
+  group_by(day) |> 
+  summarise(dailygrowth = mean(DEND309_AVG_4200_0_01,na.rm=TRUE))
+colnames(d309_daily)[colnames(d309_daily) == 'day'] <- 'Date'
+
 #310 - OG DF
 d310_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
-  summarise(hourly_avg309 = mean(DEND310_AVG_150_0_01))  
+  summarise(hourly_avg310 = mean(DEND310_AVG_150_0_01,na.rm=TRUE))|>
+  filter(!is.nan(hourly_avg310))  
+
 #311 - OG DF
 d311_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
-  summarise(hourly_avg311 = mean(DEND311_AVG_150_0_01))  
+  summarise(hourly_avg311 = mean(DEND311_AVG_150_0_01,na.rm=TRUE))|>
+  filter(!is.nan(hourly_avg311)) 
+
+#654 - Secondary 
+
+646	Western hem
+648	Western hem
+!!!651 (no core) western red cedar
+652	Western hem
+!!!654 (no core...might have actually and mislabeled as 645)
+655	Doug-fir
+656	Doug-fir
+860	Doug-fir
+
+860 654 655 and 656 are second growth PSME
+646 648 and 652 TSHE
+#
 
 
 #rainfall data (from climate comparisons updated.rmd)
@@ -182,18 +211,24 @@ unique_filtered_rain_strings <- unique(
     sapply(
       filtered_P230_rain, function(x) x[is.character(x)])))
 
-#daily totals
+#daily rain totals
 filtered_P230_rain$day <- format(
   filtered_P230_rain$Date, "%Y-%m-%d")
 filtered_P230_rain_daily <- filtered_P230_rain |> 
   group_by(day) |> 
-  summarise(daily_rain_sum = sum(PRECIP_TOT_100_0_01))
+  summarise(value = sum(PRECIP_TOT_100_0_01))
+filtered_P230_rain_daily$IDs<-"precip_sum"
+colnames(filtered_P230_rain_daily)[colnames(filtered_P230_rain_daily) == 'day'] <- 'Date'
+
 #hourly totals 
 filtered_P230_rain$hour <- format(
   filtered_P230_rain$Date, "%Y-%m-%d %H:00:00")
 filtered_P230_rain_hourly <- filtered_P230_rain |> 
   group_by(hour) |> 
-  summarise(hourly_rain_sum = sum(PRECIP_TOT_100_0_01))
+  summarise(precip_sum = sum(PRECIP_TOT_100_0_01,na.rm = TRUE))
+filtered_P230_rain_hourly$time<-as.POSIXct(filtered_P230_rain_hourly$hour,format="%Y-%m-%d %H:00:00")
+filtered_P230_rain_hourly<-filtered_P230_rain_hourly|>select(c(time,precip_sum))
+filtered_P230_rain_hourly$IDs<-"precip_sum"
 ```
 
 # Adjusting temporal resolution via dendro.resample
@@ -204,11 +239,13 @@ dendro.resample(df, by, value)
 
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `df` | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. |
-| `by` | either *H, D, W* or *M* to resample data into hourly, daily, weekly or monthly resolution. |
-| `value` | either *max, min*, *mean* or *sum* for the resampling value. |
++----------------------------------+--------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`.  |
++----------------------------------+--------------------------------------------------------------------------------------------+
+| `by`                             | either *H, D, W* or *M* to resample data into hourly, daily, weekly or monthly resolution. |
++----------------------------------+--------------------------------------------------------------------------------------------+
+| `value`                          | either *max, min*, *mean* or *sum* for the resampling value.                               |
++----------------------------------+--------------------------------------------------------------------------------------------+
 
 ```{r}
 # To resample monthly with maximum value
@@ -228,11 +265,13 @@ dendro.truncate(df, CalYear, DOY)
 
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `df` | dataframe with the first column named date and time in the format `yyyy-mm-dd HH:MM:SS`. |
-| `CalYear` | desired year of calculation. |
-| `DOY` | If we provide an array instead of a single value for `CalYear` and a single value for `DOY`, it truncates data from the `DOY` of the first `CalYear` to the same `DOY` of the second `CalYear`. Conversely, if we provide one value for `CalYear` and an array of two elements for `DOY` truncates the data form first `DOY` to second `DOY` within the same `CalYear`. Finally, if we provide an array with two values for both `DOY` and `CalYear`, it truncates data from the first `DOY` of the first `CalYear` to the second `DOY` of second `CalYear`. |
++----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with the first column named date and time in the format `yyyy-mm-dd HH:MM:SS`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
++----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `CalYear`                        | desired year of calculation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
++----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `DOY`                            | If we provide an array instead of a single value for `CalYear` and a single value for `DOY`, it truncates data from the `DOY` of the first `CalYear` to the same `DOY` of the second `CalYear`. Conversely, if we provide one value for `CalYear` and an array of two elements for `DOY` truncates the data form first `DOY` to second `DOY` within the same `CalYear`. Finally, if we provide an array with two values for both `DOY` and `CalYear`, it truncates data from the first `DOY` of the first `CalYear` to the second `DOY` of second `CalYear`. |
++----------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ```{r}
 #Example extracting data from doy 20 to 50 in 2017.
@@ -251,11 +290,13 @@ network.interpolation(df, referenceDF, niMethod)
 
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `df` | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and dendrometer data in the second column and onward. The data gaps must be filled with `NA` using the gap.interpolation function. |
-| `referenceDF` | dataframe with other dendrometers to be used as reference for the interpolation. The more dendrometers are included, the more robust will be the interpolation. |
-| `niMethod` | string, either *'linear'* or *'proportional'* for interpolation method. |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and dendrometer data in the second column and onward. The data gaps must be filled with `NA` using the gap.interpolation function. |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `referenceDF`                    | dataframe with other dendrometers to be used as reference for the interpolation. The more dendrometers are included, the more robust will be the interpolation.                                                             |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `niMethod`                       | string, either *'linear'* or *'proportional'* for interpolation method.                                                                                                                                                     |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ```{r}
 #Example from vignette
@@ -290,19 +331,23 @@ three phases in this approach: 1) Shrinkage, when the dendrometer reading is les
 
 **plot_SC_output( SC_output, DOY, Year, cols = c("#fee8c8", "#fdbb84", "#e34a33"), phNames = c("Shrinkage", "Expansion", "Increment") )**
 
-|  |  |
-|----|----|
-| `DOY` | array with initial and final day for plotting. E.g. *c(a,b)*, where a = initial date and b = final date. |
-| `cols` | array of three elements: colour for each phases. |
-| `phNames` | array with three elements for three different phases. Default is **"Shrinkage", "Expansion" and "Increment"**. |
++----------------------------------+----------------------------------------------------------------------------------------------------------------+
+| `DOY`                            | array with initial and final day for plotting. E.g. *c(a,b)*, where a = initial date and b = final date.       |
++----------------------------------+----------------------------------------------------------------------------------------------------------------+
+| `cols`                           | array of three elements: colour for each phases.                                                               |
++----------------------------------+----------------------------------------------------------------------------------------------------------------+
+| `phNames`                        | array with three elements for three different phases. Default is **"Shrinkage", "Expansion" and "Increment"**. |
++----------------------------------+----------------------------------------------------------------------------------------------------------------+
 
 ### Inputs for phase.sc:
 
-|  |  |
-|----|----|
-| `df` | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. It should contain data with constant temporal resolution for best results. |
-| `TreeNum` | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*. |
-| `smoothing` | numerical value from 1 to 12 which indicates the length of the smoothing spline, i.e. 1 = 1 hour and 12 = 12 hours. Default is `NULL` for no smoothing.The function [`smooth.Pspline`](http://127.0.0.1:17265/help/library/pspline/help/smooth.Pspline) is used for smoothing the data. |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. It should contain data with constant temporal resolution for best results.                                                                                                                    |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `TreeNum`                        | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*.                                                                                                                                                                       |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `smoothing`                      | numerical value from 1 to 12 which indicates the length of the smoothing spline, i.e. 1 = 1 hour and 12 = 12 hours. Default is `NULL` for no smoothing.The function [`smooth.Pspline`](http://127.0.0.1:17265/help/library/pspline/help/smooth.Pspline) is used for smoothing the data. |
++----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Outputs a list of two dataframes. The first dataframe *SC_cycle* with cyclic phases along with various statistics and the second dataframe *SC_phase* with assigned phases for each data point.The dataframe *SC_cycle* contains the beginning, end, duration, magnitude and rate of each phase. The dataframe *SC_phase* contains time and corresponding phases during that time.
 
@@ -312,10 +357,11 @@ phase.zg(df, TreeNum)
 
 ### Explanation of options for zero-growth approach
 
-|  |  |
-|----|----|
-| `df` | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. It should contain data with constant temporal resolution for best results. |
-| `TreeNum` | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*. |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. It should contain data with constant temporal resolution for best results. |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `TreeNum`                        | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*.                                                    |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Outputs a list of two dataframes. The first dataframe *ZG_cycle* contains the cyclic phases along with various statistics and the second dataframe *ZG_phase* with assigned phases for each data point.
 
@@ -325,42 +371,37 @@ Output can be plotted with th following code:
 plot_ZG_output(ZG_output, DOY, Year) 
 ```
 
-|  |  |
-|----|----|
-| `ZG_output` | list the output of `phase.zg` function. |
-| `DOY` | array with initial and final day for plotting. E.g. *c(a,b)*, where a = initial date and b = final date. |
-| `Year` | array for indicating year for plotting. |
++----------------------------------+----------------------------------------------------------------------------------------------------------+
+| `ZG_output`                      | list the output of `phase.zg` function.                                                                  |
++----------------------------------+----------------------------------------------------------------------------------------------------------+
+| `DOY`                            | array with initial and final day for plotting. E.g. *c(a,b)*, where a = initial date and b = final date. |
++----------------------------------+----------------------------------------------------------------------------------------------------------+
+| `Year`                           | array for indicating year for plotting.                                                                  |
++----------------------------------+----------------------------------------------------------------------------------------------------------+
 
 Two subplots with GRO and TWD respectively.
 
 ```{r}
 #SC Example
-#> sc.phase<-phase.sc(df=gf_nepa17, TreeNum=1, smoothing=12, outputplot=TRUE, days=c(150,160))
-#> head(sc.phase[[1]],10)
-#   Phases               start                 end Duration_m Duration_h
-#2       3 2017-01-01 01:00:00 2017-01-01 10:00:00        540          9
-#...11   1 2017-01-05 09:00:00 2017-01-05 19:00:00        600         10
-#     magnitude       rate DOY
-#2   0.20092774  22.325304   1
-#...11 -0.13653564 -13.653564   5
-#> head(sc.phase[[2]],10)
-#                  Time Phases
-#1  2017-01-01 00:00:00     NA
-#...10 2017-01-01 09:00:00      3
+sc.phase<-phase.sc(df=d309_hourly, TreeNum=1, smoothing=12, outputplot=TRUE, days=c(150,160))
 
 #ZG Example
-#> zg.phase<-phase.zg(df=gf_nepa17, TreeNum=1, outputplot=TRUE, days=c(150,160))
-#> head(zg.phase[[1]],10)
-#  DOY Phases               start                 end Duration_h  magnitude
-#2    1    GRO 2017-01-01 01:00:00 2017-01-01 09:00:00          8 0.20480347
-#...11  19    TWD 2017-01-04 09:00:00 2017-01-19 07:00:00        358         NA
-#         rate    Max.twd        Max.twd.time    Avg.twd     STD.twd
-#2   25.600434         NA                <NA>         NA          NA
-#...11         NA 0.81116102 2017-01-18 19:00:00 0.43560431 0.169233890
-#> head(zg.phase[[2]],10)
-#                  Time Phases         TWD
-#1  2017-01-01 00:00:00   <NA> 0.008712770
-#...10 2017-01-01 09:00:00    TWD 0.003905771
+zg.phase<-phase.zg(df=gf_nepa17, TreeNum=1, outputplot=TRUE, days=c(150,160))
+```
+
+```{r}
+#raw
+sc_d309<-phase.sc(df=d309_hourly,TreeNum = 1,smoothing = 1)
+sc_d309_plot<-plot_SC_output(sc_d309,DOY = c(91,274),Year = 2021,cols = c("red","green","blue"))
+
+#jump-free
+sc_d309_jf<-phase.sc(df=jump_free_d309_noNA,TreeNum = 1,smoothing = 1)
+sc_d309_jf_plot<-plot_SC_output(sc_d309_jf,DOY = c(91,274),Year = 2021,cols = c("red","green","blue"))
+gridExtra::grid.arrange(sc_d309_plot,sc_d309_jf_plot)
+
+#zero-growth approach: looks very strange
+zg_309<-phase.zg(df=d309_hourly,TreeNum = 1)
+plot_ZG_output(zg_309,DOY = c(91,274),Year = 2020)
 ```
 
 # Interpolating Missing Values via dm.na.interpolation
@@ -371,16 +412,18 @@ dm.na.interpolation(df, resolution, fill = FALSE, method = "spline")
 
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `df` | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and following columns with dendrometer data for the same temporal resolution and time period. |
-| `resolution` | integer, indicating the resolution of dendrometer data in **minutes**. |
-| `fill` | logical, if `TRUE` it fills the `NA` values using spline interpolation. Default is `FALSE`. |
-| `method` | string, 'spline' for the spline interpolation or 'seasonal' for the seasonal interpolation |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and following columns with dendrometer data for the same temporal resolution and time period. |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `resolution`                     | integer, indicating the resolution of dendrometer data in **minutes**.                                                                                                                 |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `fill`                           | logical, if `TRUE` it fills the `NA` values using spline interpolation. Default is `FALSE`.                                                                                            |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `method`                         | string, 'spline' for the spline interpolation or 'seasonal' for the seasonal interpolation                                                                                             |
++----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ```{r}
-#gf_nepa17<-dm.na.interpolation(df=nepa17, resolution=60)
-#head(gf_nepa17,10)
+sc_d309<-
 ```
 
 Locating maxima TWD Periods with twd.maxima
@@ -399,7 +442,7 @@ Locating maxima TWD Periods with twd.maxima
 #43                  660          2
 ```
 
-# Plotting amplitude (max-min) from daily.data.patched 
+# Plotting amplitude (max-min) from daily.data.patched
 
 See "Code to run at launch" section for details on daily.data vs daily.data.patched
 
@@ -467,26 +510,48 @@ raw311amp <- ggplot(
 raw311amp
 ```
 
-# Relative Dry Growth During Climate Adverse events with clim.twd
+# 1Relative Dry Growth During Climate Adverse events with clim.twd
 
 ```         
 clim.twd(df,   Clim,   dailyValue = "max",   thresholdClim = "<10",   thresholdDays = ">5",   showPlot = TRUE ) 
 ```
 
+```{r}
+library(dendRoAnalyst)
+data(gf_nepa17)
+data(ktm_rain17)
+relative_dry_growth<-clim.twd(df=gf_nepa17, Clim=ktm_rain17, dailyValue='max', showPlot=TRUE)
+1
+
+```
+
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `Clim` | dataframe with the first column containing `Date in yyyy-mm-dd` and second column containing corresponding climate data. |
-| `dailyValue` | either *'max', 'min', 'mean'*, or *'sum'* for selecting the daily resampled value. Default is *'max'*. See [`dendro.resample`](http://127.0.0.1:17265/help/library/dendRoAnalyst/help/dendro.resample) for details. |
-| `thresholdClim` | string, the theshold for the respective climatic parameter. E.g. if climatic data is precipitation then days, where precipitation is below or equal to this value, are considered as adverse climate. Dafault is '\<10'. |
-| `thresholdDays` | string, the minimum number of consecutive adverse days to be considered for analysis. For example, `thresholdDays`=2 means the relative radial/circumferential change is calculated for adverse periods lasting for more than 2 days. Default is '\>5'. |
++----------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `Clim`                           | dataframe with the first column containing `Date in yyyy-mm-dd` and second column containing corresponding climate data.                                                                                                                                |
++----------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `dailyValue`                     | either *'max', 'min', 'mean'*, or *'sum'* for selecting the daily resampled value. Default is *'max'*. See [`dendro.resample`](http://127.0.0.1:17265/help/library/dendRoAnalyst/help/dendro.resample) for details.                                     |
++----------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `thresholdClim`                  | string, the theshold for the respective climatic parameter. E.g. if climatic data is precipitation then days, where precipitation is below or equal to this value, are considered as adverse climate. Dafault is '\<10'.                                |
++----------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `thresholdDays`                  | string, the minimum number of consecutive adverse days to be considered for analysis. For example, `thresholdDays`=2 means the relative radial/circumferential change is calculated for adverse periods lasting for more than 2 days. Default is '\>5'. |
++----------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 ```{r}
+#raw309
  library(dendRoAnalyst)
 relative_dry_growth309<-clim.twd(
-  df=d309_hourly, 
-  Clim=filtered_P230_rain_hourly, 
+  df=d309_daily, 
+  Clim=filtered_P230_rain_daily, 
+  dailyValue='mean', 
+  thresholdClim = "<2.5",
+  thresholdDays = ">10",
+  showPlot=TRUE)
+
+#jump-free309
+relative_dry_growth_jf309<-clim.twd(
+  df=jump_free_d309, 
+  Clim=filtered_P230_rain_daily, 
   dailyValue='mean', 
   thresholdClim = "<2.5",
   thresholdDays = ">10",
@@ -503,34 +568,80 @@ i.jump.locator(df, TreeNum, v)
 
 output is a new df that locates and adjusts the artefacts
 
-|  |  |
-|----|----|
-| `df` | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and the dendrometer data in following columns. |
-| `TreeNum` | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*. |
-| `v` | numerical value which is considered as artefact. E.g. `v`=1 implies that if the difference to the consecutive data point is more than 1 or less than -1, it will be considered as an artefact. |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`                             | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and the dendrometer data in following columns.                                                        |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `TreeNum`                        | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*.                                                                              |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `v`                              | numerical value which is considered as artefact. E.g. `v`=1 implies that if the difference to the consecutive data point is more than 1 or less than -1, it will be considered as an artefact. |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 #### Examples from vignette:
 
 ```{r}
-#jump_free_nepa<-jump.locator(df=nepa, TreeNum=1 ,v=1)
-#[1] "The jump(s) in dendrometer data:"
-#  Location Time                  Difference
-#1 "6000"   "2017-01-09 17:00:00" "1.993"   
-#2 "9000"   "2017-05-14 17:00:00" "-2.753"  
-#Press [enter] to continue
-#Press [enter] to adjust this jump
-#Press [enter] to continue
-#Done!!!> head(jump_free_nepa,10)
-#                  Time       T2
-#1  2016-05-04 18:00:00 47.61461
-#...10 2016-05-05 03:00:00 48.13606
+jump_free_nepa<-jump.locator(df=nepa,v=1)
 ```
 
 #### Using our own data:
 
-```{r}
-jump_free_d309<-jump.locator(df=d309_hourly,v=200) #this takes out 38 values
+First look at the raw data outputs and see how the jumps are to help set the "v=" value. When you run the function it makes a table with the number of rows equal to the number of removed values and the columns equal to observation number, timestamp of the jump, and the value of the jump. If you name the jump locator object, that will add an object to your environment of the adjusted df with the jump values removed.
 
+```{r}
+jump_free_d309<-
+jump.locator(df=d309_hourly,v=200) 
+#this takes out 41 values and makes a table with the jump value & time and makes a df with the removed values 
+
+jump_free_d310<-jump.locator(df=d310_hourly,v=200)
+
+jump_free_d311<-jump.locator(df=d311_hourly,v=200)
+
+```
+
+#### Plotting new data to see the difference:
+
+Plots with all dates on the x axis
+
+```{r}
+vline_HD <- as.POSIXct("2021-06-25 00:00")
+vline_oct1<-as.POSIXct(c("2018-10-01 00:00","2019-10-01 00:00","2020-10-01 00:00","2021-10-01 00:00","2022-10-01 00:00","2023-10-01 00:00","2024-10-01 00:00"))
+vline_apr1<-as.POSIXct(c("2018-04-01 00:00","2019-04-01 00:00","2020-04-01 00:00","2021-04-01 00:00","2022-04-01 00:00","2023-04-01 00:00","2024-04-01 00:00"))
+
+ggplot(
+  jump_free_d309,aes(x=TIME,y=value))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="OG DF (ID 309) Adjusted Stem Circumference Change",
+      x="Date",y="Stem Circumference Change (µm)") +theme_minimal()+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "red")+  geom_vline(xintercept = as.numeric(vline_oct1), linetype = "dashed", color = "green")+  geom_vline(xintercept = as.numeric(vline_apr1), linetype = "dashed", color = "purple")
+
+ggplot(
+  jump_free_d310,aes(x=TIME,y=hourly_avg310))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="OG DF (ID 310) Adjusted Stem Circumference Change",
+      x="Date",y="Stem Circumference Change (µm)") +theme_minimal()+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "red")+  geom_vline(xintercept = as.numeric(vline_oct1), linetype = "dashed", color = "green")+  geom_vline(xintercept = as.numeric(vline_apr1), linetype = "dashed", color = "purple")
+
+ggplot(
+  jump_free_d311,aes(x=TIME,y=hourly_avg311))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="OG DF (ID 311) Adjusted Stem Circumference Change",
+      x="Date",y="Stem Circumference Change (µm)") +theme_minimal()+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "red")+  geom_vline(xintercept = as.numeric(vline_oct1), linetype = "dashed", color = "green")+  geom_vline(xintercept = as.numeric(vline_apr1), linetype = "dashed", color = "purple")
+```
+
+Raw plots were made in "ecomatik.rmd"
+
+```{r}
+#Apr1-Oct1 D309
+jump_free_d309$yr<-format(jump_free_d309$TIME, "%Y")
+jump_free_d309$yr<-as.factor(jump_free_d309$yr)
+jump_free_d309$DOY<-yday(jump_free_d309$TIME)
+ggplot(
+  jump_free_d309,aes(x=DOY,y=value,color=factor(yr)))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="OG DF (ID 309) Adjusted Stem Circumference Change",
+      x="Day of Year",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+ geom_vline(
+              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(-2000,25500)#+xlim(91,274)
 ```
 
 # Modeling annual growth with a gompertz function
@@ -542,12 +653,19 @@ gomp_fitted<-dm.fit.gompertz(df=gf_nepa17, TreeNum = 1, CalYear=2017)
 
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `CalYear` | numeric for year of calculation. If df has more than one year, assigning CalYear truncates the data of only that year. |
-| `f_derivative` | logical if yes returns first derivative of gompertz curve. |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| `CalYear`                        | numeric for year of calculation. If df has more than one year, assigning CalYear truncates the data of only that year. |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------+
+| `f_derivative`                   | logical if yes returns first derivative of gompertz curve.                                                             |
++----------------------------------+------------------------------------------------------------------------------------------------------------------------+
 
-# Calculating running correlation between  dendrometer and climate data.
+```{r}
+jump_free_d309_noNA<-jump_free_d309|>filter(!is.na(jump_free_d309$value))
+gompertz309<-dm.fit.gompertz(df=jump_free_d309_noNA,TreeNum=1,CalYear = 2021)
+ggplot(gompertz309,aes(x=TIME,y=value))+geom_point()
+```
+
+# Calculating running correlation between dendrometer and climate data.
 
 Calculates running correlation between dendrometer series and provided climate variables. Users can choose methods such as pearson, kendall and spearman, see `?cor.test` for further information.
 
@@ -558,25 +676,29 @@ out_corr<-mov.cor.dm(df=gf_nepa17, Clim=ktm_rain17, TreeNum=1, win_size=21)
 
 ### Explanation of options
 
-|  |  |
-|----|----|
-| `win_size` | numerical, the running days windows of which the correlation is to be calculated. The minimum value is 18. |
-| `cor_method` | string, method to be applied during correlation calculation. One of the following: pearson, kendall and spearman |
++----------------------------------+------------------------------------------------------------------------------------------------------------------+
+| `win_size`                       | numerical, the running days windows of which the correlation is to be calculated. The minimum value is 18.       |
++----------------------------------+------------------------------------------------------------------------------------------------------------------+
+| `cor_method`                     | string, method to be applied during correlation calculation. One of the following: pearson, kendall and spearman |
++----------------------------------+------------------------------------------------------------------------------------------------------------------+
 
 ### Output can be plotted with the following:
 
-plot_mov.cor(mov.cor.output, sig.only = T, ci = 0.95, clim_vars = "all") \
+plot_mov.cor(mov.cor.output, sig.only = T, ci = 0.95, clim_vars = "all")\
 Example code:\
 out_corr\<-mov.cor.dm(df=gf_nepa17, Clim=ktm_rain17, TreeNum=1, win_size=21) plot_mov.cor(mov.cor.output=out_corr, sig.only=TRUE, ci=0.95)
 
 ### Arguments
 
-|  |  |
-|----|----|
-| `mov.cor.output` | list the output of `mov.cor.dm` function. |
-| `sig.only` | logical TRUE to plot only significant correlation. |
-| `ci` | numeric confidence interval |
-| `clim_vars` | array of climate variables or "all" for all climate variables. |
++----------------------------------+----------------------------------------------------------------+
+| `mov.cor.output`                 | list the output of `mov.cor.dm` function.                      |
++----------------------------------+----------------------------------------------------------------+
+| `sig.only`                       | logical TRUE to plot only significant correlation.             |
++----------------------------------+----------------------------------------------------------------+
+| `ci`                             | numeric confidence interval                                    |
++----------------------------------+----------------------------------------------------------------+
+| `clim_vars`                      | array of climate variables or "all" for all climate variables. |
++----------------------------------+----------------------------------------------------------------+
 
 ```{r}
 

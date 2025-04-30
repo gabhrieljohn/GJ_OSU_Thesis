@@ -239,7 +239,7 @@ primet_239_a_5min_2023,
 primet_239_a_5min_2024)
 ```
 
-#Combining all Primet files
+#Combining all Primet files 2014-2024
 ```{r}
 Primet2014_2024<-bind_rows(
 P226long,
@@ -247,6 +247,12 @@ P229Along,
 P229Blong,
 P230long,
 P239Along)
+
+#checking for all flags to remove 
+unique_primet_strings <- unique(
+  unlist(
+    sapply(
+      Primet2014_2024, function(x) x[is.character(x)])))
 ```
 
 #Reading in/combining D420A
