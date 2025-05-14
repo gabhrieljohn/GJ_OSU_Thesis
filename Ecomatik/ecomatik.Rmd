@@ -135,6 +135,20 @@ raw309gro
 ggsave("raw309gro.png", plot = raw309gro)
 
 #+annotate("text",x=170,y=-2000,label="Onset of Heat Dome",color="black")
+
+#plot with ts on x axis
+TS309<-ggplot(
+  dscmet_422_all,aes(x=Date,y=Dend309))+geom_point(
+    size=1.25,alpha=0.5)+labs(
+      title="HJA Douglas-fir (ID 309) Stem Circumference Changes",
+      x="Date",y="Stem Circumference Change (µm)",
+      color="Legend") + scale_color_manual(
+        values = custom_colors) + guides(
+          color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))+theme_minimal(
+                )#+xlim(91,274)+ylim(-2000,17500)
+TS309
+ggsave("raw309TSgro.png", plot = TS309)
 ```
 
 #310 Plotting raw AVG dendro value for 310
