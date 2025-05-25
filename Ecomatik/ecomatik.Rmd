@@ -13,6 +13,7 @@ library(lubridate)
 library(zoo)
 library(tidyverse)
 library(dendRoAnalyst)
+library(here)
 #All relative file paths have "Ecomatik" as the working directory, e.g.,:
 #setwd("C:/Users/Gabby/Desktop/GJ_OSU_Thesis/GJ_OSU_Thesis/Ecomatik")
 #"GJ_OSU_Thesis" is the default WD when I first open the .RProj (at least it should be)
@@ -22,7 +23,7 @@ custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" =
 ```
 #Summary of what we're working with
 April 1 = DOY 91
-June 26 (Heat Dome onset) = DOY 177
+June 25 (Heat Dome onset) = DOY 176
 Oct 1 = DOY 274
 
 Dendro summary (653 is in dscmet but not usable): 
@@ -103,12 +104,15 @@ Oct 1 = DOY 274
 ```{r}
 dscmet_422_all$Dend309 <- dscmet_422_all$DEND309_AVG_4200_0_01 
 
-#All days
+#All days and one line
+raw309_1line<-ggplot(dscmet_422_all)
+
+#All days DOY
 raw309all <- ggplot(
-  dscmet_422_all,aes(x=DOY,y=Dend309,color=factor(yr)))+geom_point(
+  dscmet_422_all,aes(x=Date,y=Dend309))+geom_point(
     size=1.25,alpha=0.5)+labs(
       title="HJA Douglas-fir (ID 309) Stem Circumference Changes",
-      x="Day of Year",y="Stem Circumference Change (µm)",
+      x="Date",y="Stem Circumference Change (µm)",
       color="Legend") + scale_color_manual(
         values = custom_colors) + guides(
           color=guide_legend(override.aes = list(
@@ -119,7 +123,7 @@ raw309all
 ggsave("raw309all.png", plot = raw309all)
 
 
-#Apr1-Oct1
+#Apr1-Oct1 DOY
 raw309gro <- ggplot(
   dscmet_422_all,aes(x=DOY,y=Dend309,color=factor(yr)))+geom_point(
     size=1.25,alpha=0.5)+labs(
@@ -270,8 +274,6 @@ ggplot(long646grow, aes(x=DOY,y=annual_growth,color=factor(yr))) + geom_point(
             alpha = 1, size = 5)))+ geom_vline(
               xintercept = 177, linetype = "dashed", color = "black")+theme_minimal(
                 )+xlim(91,274)+ylim(-1000,6000)
-```
-
 
 #All days
 raw646all <- ggplot(

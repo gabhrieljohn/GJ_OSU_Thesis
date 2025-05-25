@@ -4,11 +4,14 @@ format: pdf
 editor: visual
 ---
 
+Getting weird pink text along right pane of plots need to identify:
+
+help("\_{must remake R-ex/\*.R}\_")
+
 # Code to run at launch
 
 ```{r}
 #install.packages("dendRoAnalyst")
-library(ggplot2)
 library(dplyr)
 library(readr)
 library(viridis)
@@ -19,6 +22,8 @@ library(zoo)
 library(tidyverse)
 library(dendRoAnalyst)
 custom_colors <- c("2014" = "magenta","2015" = "maroon","2016" = "red", "2017" = "orange", "2018" = "yellow", "2019" = "green", "2020" = "lightblue", "2021" = "blue", "2022" = "purple", "2023" = "pink","2024"="darkgreen")
+
+HD_colors <- c("2018" = "lightblue3", "2019" = "lightblue2", "2020" = "lightblue1", "2021" = "black", "2022" = "pink", "2023" = "pink2","2024"="pink3")
 
 #keep getting errors with logical and character vectors mixing with remarks= so let's patch the code locally with getAnywhere(daily.data)
 daily.data.patched<-function (df, TreeNum) 
@@ -41,16 +46,6 @@ daily.data.patched<-function (df, TreeNum)
         Min, Remarks = ifelse(isTRUE(Time_max > Time_min), "*", ""))
     return(result)
 }
-
-#From example DA code in vignette:
- pkgname <- "dendRoAnalyst"
- source(file.path(R.home("share"), "R", "examples-header.R"))
- options(warn = 1)
- options(pager = "console")
- library('dendRoAnalyst')
- base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
- base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
- flush(stderr()); flush(stdout())
 ```
 
 # Function Information
@@ -154,8 +149,8 @@ dscmet_422_all$day<-as.POSIXct(dscmet_422_all$day,format="%Y-%m-%d")
 #309 - OG DF - need to check if these values are accurate
 d309_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
-  summarise(value = mean(DEND309_AVG_4200_0_01,na.rm=TRUE))|>
-  filter(!is.nan(value))
+  summarise(hourly_avg309 = mean(DEND309_AVG_4200_0_01,na.rm=TRUE))|>
+  filter(!is.nan(hourly_avg309))
 colnames(d309_hourly)[colnames(d309_hourly) == 'hour'] <- 'Date'
 
 #daily values 
@@ -176,28 +171,40 @@ d311_hourly <- dscmet_422_all |>
   summarise(hourly_avg311 = mean(DEND311_AVG_150_0_01,na.rm=TRUE))|>
   filter(!is.nan(hourly_avg311)) 
 
-#654 - Secondary DF
+#651 - OG WRC
+d651_hourly <- dscmet_422_all |> 
+  group_by(hour) |> 
+  summarise(hourly_avg651 = mean(DEND651_AVG_150_0_01,na.rm=TRUE))|>
+  filter(!is.nan(hourly_avg651)) 
+
+
+#654 - Secondary DF - filtering to start after -8mil weirdness
 d654_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
   summarise(hourly_avg654 = mean(DEND654_AVG_150_0_01,na.rm=TRUE))|>
+  filter(hour >= as.POSIXct("2018-11-05 15:00:00"))|>
   filter(!is.nan(hourly_avg654)) 
 
-#655 - Secondary DF
+#655 - Secondary DF - filtering to start after -8mil weirdness
 d655_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
   summarise(hourly_avg655 = mean(DEND655_AVG_150_0_01,na.rm=TRUE))|>
-  filter(!is.nan(hourly_avg655)) 
+  filter(hour >= as.POSIXct("2018-11-05 15:00:00"))|>
+  filter(!is.nan(hourly_avg655))
 
-#656 - Secondary DF
+#656 - Secondary DF - filtering to start after -8mil weirdness
 d656_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
   summarise(hourly_avg656 = mean(DEND656_AVG_150_0_01,na.rm=TRUE))|>
+  filter(hour >= as.POSIXct("2018-11-05 15:00:00"))|>
   filter(!is.nan(hourly_avg656)) 
 
 #860 - Secondary DF - note only ~15% of original canopy remains alive
+#also filtering to start after -8mil weirdness
 d860_hourly <- dscmet_422_all |> 
   group_by(hour) |> 
   summarise(hourly_avg860 = mean(DEND860_AVG_150_0_01,na.rm=TRUE))|>
+  filter(hour >= as.POSIXct("2019-05-28 09:00:00"))|>
   filter(!is.nan(hourly_avg860)) 
 
 #646 OG WH
@@ -233,7 +240,7 @@ load(file=here("P230.RData"))
 values_to_remove_P230rain <- c("Q", "QQ")
 
 # Filter data frame to swap back values with NA
-filtered_P230_rain <- P230_rain[!rowSums(sapply(P230_rain, function(x) x %in% values_to_remove | is.na(x))) > 0, ]
+filtered_P230_rain <- P230_df[!rowSums(sapply(P230_df, function(x) x %in% values_to_remove_P230rain | is.na(x))) > 0, ]
 save(filtered_P230_rain,file = "filtered_P230_rain.RData")
 
 #daily rain totals
@@ -280,8 +287,7 @@ dm.na.interpolation(df, resolution, fill = FALSE, method = "spline")
 
 Locating maxima TWD Periods with twd.maxima
 
-```{r} # library(dendRoAnalyst) #> data(gf_nepa17) #> df1=gf_nepa17[2500:3500,] #> twd_max<-twd.maxima(df=df1, TreeNum=2, showPlot=FALSE) #> head(twd_max,10) #             start.time            end.time                Time         TWD #20  2017-04-15 11:00:00 2017-04-16 04:00:00 2017-04-15 22:00:00 0.028245289 #43  2017-04-16 08:00:00 2017-04-18 06:00:00 2017-04-16 21:00:00 0.070221431 #    duration_from_start twd.number #20                  540          1 #43                  660          2}
-```
+`{r} # library(dendRoAnalyst) #> data(gf_nepa17) #> df1=gf_nepa17[2500:3500,] #> twd_max<-twd.maxima(df=df1, TreeNum=2, showPlot=FALSE) #> head(twd_max,10) #             start.time            end.time                Time         TWD #20  2017-04-15 11:00:00 2017-04-16 04:00:00 2017-04-15 22:00:00 0.028245289 #43  2017-04-16 08:00:00 2017-04-18 06:00:00 2017-04-16 21:00:00 0.070221431 #    duration_from_start twd.number #20                  540          1 #43                  660          2}`
 
 ## Interpolation option 2: using dendrometer network via network.interpolation
 
@@ -299,8 +305,7 @@ network.interpolation(df, referenceDF, niMethod)
 | `niMethod`    | string, either *'linear'* or *'proportional'* for interpolation method.                                                                                                                                                     |
 +---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-```{r} #Example from vignette #df1<-gf_nepa17 #> # Creating an artificial reference dataset. #> df2<-cbind(gf_nepa17,gf_nepa17[,2:3],gf_nepa17[,2:3]) #> # Creating gaps in dataset by replacing some of the reading with NA in dataset. #> df1[40:50,3]<-NA #> # Using proportional interpolation method. #> df1_NI<-network.interpolation(df=df1, referenceDF=df2, niMethod='proportional') #Warning in norm.inter(t, adj.alpha) : #  extreme order statistics used as endpoints #[1] "Interpolation in T3" #         Time Interpolated_value    LCI95    UCI95 #1  1483369200           48.31525 48.30600 48.32141 #2  1483372800           48.31522 48.31331 48.31585 #> head(df1_NI,10) #                  Time       T2       T3 #1  2017-01-01 00:00:00 62.26459 48.16801 #...10 2017-01-01 09:00:00 62.46552 48.21498}
-```
+`{r} #Example from vignette #df1<-gf_nepa17 #> # Creating an artificial reference dataset. #> df2<-cbind(gf_nepa17,gf_nepa17[,2:3],gf_nepa17[,2:3]) #> # Creating gaps in dataset by replacing some of the reading with NA in dataset. #> df1[40:50,3]<-NA #> # Using proportional interpolation method. #> df1_NI<-network.interpolation(df=df1, referenceDF=df2, niMethod='proportional') #Warning in norm.inter(t, adj.alpha) : #  extreme order statistics used as endpoints #[1] "Interpolation in T3" #         Time Interpolated_value    LCI95    UCI95 #1  1483369200           48.31525 48.30600 48.32141 #2  1483372800           48.31522 48.31331 48.31585 #> head(df1_NI,10) #                  Time       T2       T3 #1  2017-01-01 00:00:00 62.26459 48.16801 #...10 2017-01-01 09:00:00 62.46552 48.21498}`
 
 # Step 2: Remove artefacts from manual adjustments with jump.locator
 
@@ -312,48 +317,1506 @@ i.jump.locator(df, TreeNum, v)
 
 output is a new df that locates and adjusts the artefacts
 
-+-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `df`        | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and the dendrometer data in following columns.                                                        |
-+-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `TreeNum`   | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*.                                                                              |
-+-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `v`         | numerical value which is considered as artefact. E.g. `v`=1 implies that if the difference to the consecutive data point is more than 1 or less than -1, it will be considered as an artefact. |
-+-------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-#### Examples from vignette:
-
-```{r} jump_free_nepa<-jump.locator(df=nepa,v=1)}
-```
-
-#### Using our own data:
++-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `df`      | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS` and the dendrometer data in following columns.                                                        |
++-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `TreeNum` | numerical value indicating the tree to be analysed. E.g. '1' refers to the first dendrometer data column in *df*.                                                                              |
++-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `v`       | numerical value which is considered as artefact. E.g. `v`=1 implies that if the difference to the consecutive data point is more than 1 or less than -1, it will be considered as an artefact. |
++-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 First look at the raw data outputs and see how the jumps are to help set the "v=" value. When you run the function it makes a table with the number of rows equal to the number of removed values and the columns equal to observation number, timestamp of the jump, and the value of the jump. If you name the jump locator object, that will add an object to your environment of the adjusted df with the jump values removed.
 
 ```{r}
 jump_free_d309<-jump.locator(df=d309_hourly,v=200) 
 #this takes out 41 values and makes a table with the jump value & time and makes a df with the removed values 
-jump_free_d309$raw_value<-d309_hourly$hourly_avg309
-jump_free_d309$jump_free_value<-jump_free_d309$hourly_avg309
+jump_free_d309$hourly_avg309_raw<-d309_hourly$hourly_avg309
+jump_free_d309$hourly_avg309_0jump<-jump_free_d309$hourly_avg309
+jump_free_d309$ts <- jump_free_d309$TIME
+jump_free_d309$yr <- format(jump_free_d309$ts, "%Y")
+jump_free_d309$yr <- as.factor(jump_free_d309$yr)
+jump_free_d309$DOY <- yday(jump_free_d309$ts)
 
 jump_free_d310<-jump.locator(df=d310_hourly,v=200)
-jump_free_d310$raw_value<-d310_hourly$hourly_avg310
-jump_free_d310$value<-jump_free_d310$hourly_avg310
+jump_free_d310$hourly_avg310_raw <- d310_hourly$hourly_avg310
+jump_free_d310$hourly_avg310_0jump <- jump_free_d310$hourly_avg310
+jump_free_d310$ts <- jump_free_d310$TIME
+jump_free_d310$yr <- format(jump_free_d310$ts, "%Y")
+jump_free_d310$yr <- as.factor(jump_free_d310$yr)
+jump_free_d310$DOY <- yday(jump_free_d310$ts)
 
-jump_free_d311<-jump.locator(df=d311_hourly,v=200)
+jump_free_d311 <- jump.locator(df = d311_hourly, v = 200) 
+jump_free_d311$hourly_avg311_raw <- d311_hourly$hourly_avg311
+jump_free_d311$hourly_avg311_0jump <- jump_free_d311$hourly_avg311
+jump_free_d311$ts <- jump_free_d311$TIME
+jump_free_d311$yr <- format(jump_free_d311$ts, "%Y")
+jump_free_d311$yr <- as.factor(jump_free_d311$yr)
+jump_free_d311$DOY <- yday(jump_free_d311$ts)
 
-jump_free_d646<-jump.locator(df=d646_hourly,v=200)
 
-jump_free_d648<-jump.locator(df=d648_hourly,v=200)
+jump_free_d646 <- jump.locator(df = d646_hourly, v = 200) 
+jump_free_d646$hourly_avg646_raw <- d646_hourly$hourly_avg646
+jump_free_d646$hourly_avg646_0jump <- jump_free_d646$hourly_avg646
+jump_free_d646$ts <- jump_free_d646$TIME
+jump_free_d646$yr <- format(jump_free_d646$ts, "%Y")
+jump_free_d646$yr <- as.factor(jump_free_d646$yr)
+jump_free_d646$DOY <- yday(jump_free_d646$ts)
 
-jump_free_d652<-jump.locator(df=d652_hourly,v=200)
 
-jump_free_d654<-jump.locator(df=d654_hourly,v=200)
+jump_free_d648 <- jump.locator(df = d648_hourly, v = 200) 
+jump_free_d648$hourly_avg648_raw <- d648_hourly$hourly_avg648
+jump_free_d648$hourly_avg648_0jump <- jump_free_d648$hourly_avg648
+jump_free_d648$ts <- jump_free_d648$TIME
+jump_free_d648$yr <- format(jump_free_d648$ts, "%Y")
+jump_free_d648$yr <- as.factor(jump_free_d648$yr)
+jump_free_d648$DOY <- yday(jump_free_d648$ts)
 
-jump_free_d655<-jump.locator(df=d655_hourly,v=200)
 
-jump_free_d656<-jump.locator(df=d656_hourly,v=200)
+jump_free_d652 <- jump.locator(df = d652_hourly, v = 200) 
+jump_free_d652$hourly_avg652_raw <- d652_hourly$hourly_avg652
+jump_free_d652$hourly_avg652_0jump <- jump_free_d652$hourly_avg652
+jump_free_d652$ts <- jump_free_d652$TIME
+jump_free_d652$yr <- format(jump_free_d652$ts, "%Y")
+jump_free_d652$yr <- as.factor(jump_free_d652$yr)
+jump_free_d652$DOY <- yday(jump_free_d652$ts)
 
-jump_free_d860<-jump.locator(df=d860_hourly,v=200)
+
+jump_free_d654 <- jump.locator(df = d654_hourly, v = 200) 
+jump_free_d654$hourly_avg654_raw <- d654_hourly$hourly_avg654
+jump_free_d654$hourly_avg654_0jump <- jump_free_d654$hourly_avg654
+jump_free_d654$ts <- jump_free_d654$TIME
+jump_free_d654$yr <- format(jump_free_d654$ts, "%Y")
+jump_free_d654$yr <- as.factor(jump_free_d654$yr)
+jump_free_d654$DOY <- yday(jump_free_d654$ts)
+
+
+jump_free_d655 <- jump.locator(df = d655_hourly, v = 200) 
+jump_free_d655$hourly_avg655_raw <- d655_hourly$hourly_avg655
+jump_free_d655$hourly_avg655_0jump <- jump_free_d655$hourly_avg655
+jump_free_d655$ts <- jump_free_d655$TIME
+jump_free_d655$yr <- format(jump_free_d655$ts, "%Y")
+jump_free_d655$yr <- as.factor(jump_free_d655$yr)
+jump_free_d655$DOY <- yday(jump_free_d655$ts)
+
+
+jump_free_d656 <- jump.locator(df = d656_hourly, v = 200) 
+jump_free_d656$hourly_avg656_raw <- d656_hourly$hourly_avg656
+jump_free_d656$hourly_avg656_0jump <- jump_free_d656$hourly_avg656
+jump_free_d656$ts <- jump_free_d656$TIME
+jump_free_d656$yr <- format(jump_free_d656$ts, "%Y")
+jump_free_d656$yr <- as.factor(jump_free_d656$yr)
+jump_free_d656$DOY <- yday(jump_free_d656$ts)
+
+
+jump_free_d860 <- jump.locator(df = d860_hourly, v = 200) 
+jump_free_d860$hourly_avg860_raw <- d860_hourly$hourly_avg860
+jump_free_d860$hourly_avg860_0jump <- jump_free_d860$hourly_avg860
+jump_free_d860$ts <- jump_free_d860$TIME
+jump_free_d860$yr <- format(jump_free_d860$ts, "%Y")
+jump_free_d860$yr <- as.factor(jump_free_d860$yr)
+jump_free_d860$DOY <- yday(jump_free_d860$ts)
+
+
+jump_free_d651 <- jump.locator(df = d651_hourly, v = 200) 
+jump_free_d651$hourly_avg651_raw <- d651_hourly$hourly_avg651
+jump_free_d651$hourly_avg651_0jump <- jump_free_d651$hourly_avg651
+jump_free_d651$ts <- jump_free_d651$TIME
+jump_free_d651$yr <- format(jump_free_d651$ts, "%Y")
+jump_free_d651$yr <- as.factor(jump_free_d651$yr)
+jump_free_d651$DOY <- yday(jump_free_d651$ts)
+```
+
+### Plots to see the difference
+
+#### Plot type 1: 1 curve per dendrometer 
+
+First define growing season for each year and Heat Dome line\
+Second define raw and jump free ggplots \
+Third make a figure with raw and jump free plots next to each other
+
+```{r}
+#Defining ranges for plot shading
+
+#maybe we come back to adjust this after perhaps dentifying start of actual growing szn
+growing_seasons_default <- data.frame(
+  xmin = as.POSIXct(c("2018-04-01 00:00","2019-04-01 00:00","2020-04-01 00:00","2021-04-01 00:00","2022-04-01 00:00","2023-04-01 00:00","2024-04-01 00:00")),
+  xmax = as.POSIXct(c("2018-10-01 00:00","2019-10-01 00:00","2020-10-01 00:00","2021-10-01 00:00","2022-10-01 00:00","2023-10-01 00:00","2024-10-01 00:00")),
+  fill = "April1-Oct.1")
+vline_HD<-as.POSIXct("2021-06-25 00:00")
+
+#"\u25B2" = triangle
+
+#309
+raw309_1curve <- ggplot(
+  jump_free_d309,aes(x=TIME,y=hourly_avg309_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG DF (ID 309) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free309_1curve <- ggplot(
+  jump_free_d309,aes(x=TIME,y=hourly_avg309_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw309_1curve,jump_free309_1curve)
+two_1curve_plots309 <- 
+  gridExtra::grid.arrange(raw309_1curve,jump_free309_1curve)
+ggsave(here("Plots/two_1curve_plots309.png"), 
+       plot = two_1curve_plots309)
+
+
+#310
+raw310_1curve <- ggplot(
+  jump_free_d310,aes(x=TIME,y=hourly_avg310_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG DF (ID 310) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free310_1curve <- ggplot(
+  jump_free_d310,aes(x=TIME,y=hourly_avg310_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw310_1curve,jump_free310_1curve)
+two_1curve_plots310 <- 
+  gridExtra::grid.arrange(raw310_1curve, jump_free310_1curve)
+ggsave(here("Plots/two_1curve_plots310.png"), 
+       plot = two_1curve_plots310)
+
+#311
+raw311_1curve <- ggplot(
+  jump_free_d311,aes(x=TIME,y=hourly_avg311_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG DF (ID 311) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free311_1curve <- ggplot(
+  jump_free_d311,aes(x=TIME,y=hourly_avg311_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw311_1curve,jump_free311_1curve)
+two_1curve_plots311 <- 
+  gridExtra::grid.arrange(raw311_1curve, jump_free311_1curve)
+ggsave(here("Plots/two_1curve_plots311.png"), 
+       plot = two_1curve_plots311)
+
+#646
+raw646_1curve <- ggplot(
+  jump_free_d646,aes(x=TIME,y=hourly_avg646_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG WH (ID 646) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free646_1curve <- ggplot(
+  jump_free_d646,aes(x=TIME,y=hourly_avg646_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw646_1curve,jump_free646_1curve)
+two_1curve_plots646 <- 
+  gridExtra::grid.arrange(raw646_1curve, jump_free646_1curve)
+ggsave(here("Plots/two_1curve_plots646.png"), 
+       plot = two_1curve_plots646)
+
+#648
+raw648_1curve <- ggplot(
+  jump_free_d648,aes(x=TIME,y=hourly_avg648_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG WH (ID 648) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(
+    limits = as.POSIXct(c("2023-01-01 00:00:00", NA)),
+    date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free648_1curve <- ggplot(
+  jump_free_d648,aes(x=TIME,y=hourly_avg648_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(
+    limits = as.POSIXct(c("2023-01-01 00:00:00", NA)),
+    date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw648_1curve,jump_free648_1curve)
+two_1curve_plots648 <- 
+  gridExtra::grid.arrange(raw648_1curve, jump_free648_1curve)
+ggsave(here("Plots/two_1curve_plots648.png"), 
+       plot = two_1curve_plots648)
+
+#651
+raw651_1curve <- ggplot(
+  jump_free_d651,aes(x=TIME,y=hourly_avg651_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG WRC (ID 651) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(
+    limits = as.POSIXct(c("2023-01-01 00:00:00", NA)),
+    date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free651_1curve <- ggplot(
+  jump_free_d651,aes(x=TIME,y=hourly_avg651_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(
+    limits = as.POSIXct(c("2023-01-01 00:00:00", NA)),
+    date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw651_1curve,jump_free651_1curve)
+two_1curve_plots651 <- 
+  gridExtra::grid.arrange(raw651_1curve, jump_free651_1curve)
+ggsave(here("Plots/two_1curve_plots651.png"), 
+       plot = two_1curve_plots651)
+
+#652
+raw652_1curve <- ggplot(
+  jump_free_d652,aes(x=TIME,y=hourly_avg652_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="OG WH (ID 652) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(
+    limits = as.POSIXct(c("2023-01-01 00:00:00", NA)),
+    date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free652_1curve <- ggplot(
+  jump_free_d652,aes(x=TIME,y=hourly_avg652_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(
+    limits = as.POSIXct(c("2023-01-01 00:00:00", NA)),
+    date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw652_1curve,jump_free652_1curve)
+two_1curve_plots652 <-
+  gridExtra::grid.arrange(raw652_1curve, jump_free652_1curve)
+ggsave(here("Plots/two_1curve_plots652.png"), 
+       plot = two_1curve_plots652)
+
+#654 
+raw654_1curve <- ggplot(
+  jump_free_d654,aes(x=TIME,y=hourly_avg654_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="2° DF (ID 654) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+jump_free654_1curve <- ggplot(
+  jump_free_d654,aes(x=TIME,y=hourly_avg654_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD), 
+               linetype = "solid", color = "red")+ 
+    geom_rect(data = growing_seasons_default, 
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax, 
+                                      ymin = -Inf, ymax = Inf, 
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw654_1curve,jump_free654_1curve)
+two_1curve_plots654 <- 
+  gridExtra::grid.arrange(raw654_1curve, jump_free654_1curve)
+ggsave(here("Plots/two_1curve_plots654.png"), 
+       plot = two_1curve_plots654)
+
+#655
+raw655_1curve <- ggplot(
+  jump_free_d655,aes(x=TIME,y=hourly_avg655_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="2° DF (ID 655) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD),
+               linetype = "solid", color = "red")+
+    geom_rect(data = growing_seasons_default,
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax,
+                                      ymin = -Inf, ymax = Inf,
+                                      fill = fill),alpha = 0.1)
+jump_free655_1curve <- ggplot(
+  jump_free_d655,aes(x=TIME,y=hourly_avg655_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD),
+               linetype = "solid", color = "red")+
+    geom_rect(data = growing_seasons_default,
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax,
+                                      ymin = -Inf, ymax = Inf,
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw655_1curve,jump_free655_1curve)
+two_1curve_plots655 <- 
+  gridExtra::grid.arrange(raw655_1curve, jump_free655_1curve)
+ggsave(here("Plots/two_1curve_plots655.png"), 
+       plot = two_1curve_plots655)
+
+#656
+raw656_1curve <- ggplot(
+  jump_free_d656,aes(x=TIME,y=hourly_avg656_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="2° DF (ID 656) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD),
+               linetype = "solid", color = "red")+
+    geom_rect(data = growing_seasons_default,
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax,
+                                      ymin = -Inf, ymax = Inf,
+                                      fill = fill),alpha = 0.1)
+jump_free656_1curve <- ggplot(
+  jump_free_d656,aes(x=TIME,y=hourly_avg656_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD),
+               linetype = "solid", color = "red")+
+    geom_rect(data = growing_seasons_default,
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax,
+                                      ymin = -Inf, ymax = Inf,
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw656_1curve,jump_free656_1curve)
+two_1curve_plots656 <- 
+  gridExtra::grid.arrange(raw656_1curve, jump_free656_1curve)
+ggsave(here("Plots/two_1curve_plots656.png"), 
+       plot = two_1curve_plots656)
+
+#860
+raw860_1curve <- ggplot(
+  jump_free_d860,aes(x=TIME,y=hourly_avg860_raw))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(title="2° DF (ID 860) Stem Circumference Change (µm)",
+         x="Date",y="Unadjusted\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD),
+               linetype = "solid", color = "red")+
+    geom_rect(data = growing_seasons_default,
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax,
+                                      ymin = -Inf, ymax = Inf,
+                                      fill = fill),alpha = 0.1)
+jump_free860_1curve <- ggplot(
+  jump_free_d860,aes(x=TIME,y=hourly_avg860_0jump))+
+    geom_point(size=1.25,alpha=0.5)+
+    labs(x="Date",y="Jump-Free\u25B2")+
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y")+
+    theme_minimal()+
+    geom_vline(xintercept = as.numeric(vline_HD),
+               linetype = "solid", color = "red")+
+    geom_rect(data = growing_seasons_default,
+              inherit.aes = FALSE,aes(xmin = xmin, xmax = xmax,
+                                      ymin = -Inf, ymax = Inf,
+                                      fill = fill),alpha = 0.1)
+#combining plots and saving 
+gridExtra::grid.arrange(raw860_1curve,jump_free860_1curve)
+two_1curve_plots860 <- 
+  gridExtra::grid.arrange(raw860_1curve, jump_free860_1curve)
+ggsave(here("Plots/two_1curve_plots860.png"), 
+       plot = two_1curve_plots860)
+
+```
+
+#### Plot type 2: each year starting at 0
+
+##### 309
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d309$raw_309 <- jump_free_d309$hourly_avg309_raw 
+jump_free_d309$jumpfree_309 <- jump_free_d309$hourly_avg309_0jump
+
+wide309gro<-jump_free_d309|>
+  select(c(raw_309,jumpfree_309,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_309,jumpfree_309),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide309gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide309gro$unadjusted_2018<-wide309gro$raw_309_2018 
+wide309gro$nojump_2018<-wide309gro$jumpfree_309_2018 
+#no adjustment for 2018 since first readings are in July
+
+wide309gro$unadjusted_2019<-wide309gro$raw_309_2019-2016.833
+wide309gro$nojump_2019<-wide309gro$jumpfree_309_2019-2016.833
+
+wide309gro$unadjusted_2020 <- wide309gro$raw_309_2020-(-658.5833)
+wide309gro$nojump_2020     <- wide309gro$jumpfree_309_2020-676.0000
+
+wide309gro$unadjusted_2021 <- wide309gro$raw_309_2021-10387.00
+wide309gro$nojump_2021      <- wide309gro$jumpfree_309_2021-(-489.5833)
+
+wide309gro$unadjusted_2022 <- wide309gro$raw_309_2022-12954.83
+wide309gro$nojump_2022  <- wide309gro$jumpfree_309_2022-1562.667
+
+wide309gro$unadjusted_2023 <- wide309gro$raw_309_2023-16044.00
+wide309gro$nojump_2023 <- wide309gro$jumpfree_309_2023-4843.771
+
+wide309gro$unadjusted_2024 <- wide309gro$raw_309_2024-11627.33
+wide309gro$nojump_2024   <- wide309gro$jumpfree_309_2024-7569.021
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long309gro<- wide309gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long309gro_unadjusted<-long309gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long309gro_nojump<-long309gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+#ggplot where each year is a panel in one figure (not using)
+#ggplot(long309gro, aes(x = DOY, y = growth, color = adjustment)) +
+#  geom_line(alpha = 0.8) +
+#  facet_wrap(~ yr) +
+#  theme_minimal() +
+#  labs(y = "Stem Circumference (µm)", color = "Data Type")
+
+#ggplot with each year a separate line: unadjusted
+unadjusted309_factor_yr <- 
+  ggplot(long309gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG DF (ID 309) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted309_factor_yr.png"), 
+       plot = unadjusted309_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump309_factor_yr<-
+  ggplot(long309gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG DF (ID 309) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump309_factor_yr.png"), 
+       plot = nojump309_factor_yr)
+
+unadjusted309_factor_yr
+nojump309_factor_yr
+```
+
+##### 310
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d310$raw_310 <- jump_free_d310$hourly_avg310_raw 
+jump_free_d310$jumpfree_310 <- jump_free_d310$hourly_avg310_0jump
+
+wide310gro<-jump_free_d310|>
+  select(c(raw_310,jumpfree_310,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_310,jumpfree_310),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide310gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide310gro$unadjusted_2018<-wide310gro$raw_310_2018 
+wide310gro$nojump_2018<-wide310gro$jumpfree_310_2018 
+
+wide310gro$unadjusted_2019<-wide310gro$raw_310_2019-3965.000
+wide310gro$nojump_2019<-wide310gro$jumpfree_310_2019-3118.333
+
+wide310gro$unadjusted_2020 <- wide310gro$raw_310_2020-11829.92
+wide310gro$nojump_2020     <- wide310gro$jumpfree_310_2020-10651.00
+
+wide310gro$unadjusted_2021 <- wide310gro$raw_310_2021-4932.750
+wide310gro$nojump_2021      <- wide310gro$jumpfree_310_2021-18123.08
+
+wide310gro$unadjusted_2022 <- wide310gro$raw_310_2022-5927.250
+wide310gro$nojump_2022  <- wide310gro$jumpfree_310_2022-24102.08
+
+wide310gro$unadjusted_2023 <- wide310gro$raw_310_2023-6099.917
+wide310gro$nojump_2023 <- wide310gro$jumpfree_310_2023-29155.43
+
+wide310gro$unadjusted_2024 <- wide310gro$raw_310_2024-2261.083
+wide310gro$nojump_2024   <- wide310gro$jumpfree_310_2024-34458.52
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long310gro<- wide310gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long310gro_unadjusted<-long310gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long310gro_nojump<-long310gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+#ggplot with each year a separate line: unadjusted
+unadjusted310_factor_yr <- 
+  ggplot(long310gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG DF (ID 310) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted310_factor_yr.png"), 
+       plot = unadjusted310_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump310_factor_yr<-
+  ggplot(long310gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG DF (ID 310) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump310_factor_yr.png"), 
+       plot = nojump310_factor_yr)
+
+unadjusted310_factor_yr
+nojump310_factor_yr
+```
+
+##### 311
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d311$raw_311 <- jump_free_d311$hourly_avg311_raw 
+jump_free_d311$jumpfree_311 <- jump_free_d311$hourly_avg311_0jump
+
+wide311gro<-jump_free_d311|>
+  select(c(raw_311,jumpfree_311,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_311,jumpfree_311),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide311gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide311gro$unadjusted_2018<-wide311gro$raw_311_2018 
+wide311gro$nojump_2018<-wide311gro$jumpfree_311_2018 
+
+wide311gro$unadjusted_2019<-wide311gro$raw_311_2019-6911.750
+wide311gro$nojump_2019<-wide311gro$jumpfree_311_2019-6378.500
+
+wide311gro$unadjusted_2020 <- wide311gro$raw_311_2020-22133.25
+wide311gro$nojump_2020     <- wide311gro$jumpfree_311_2020-18293.96
+
+wide311gro$unadjusted_2021 <- wide311gro$raw_311_2021-5447.667
+wide311gro$nojump_2021      <- wide311gro$jumpfree_311_2021-37181.96
+
+wide311gro$unadjusted_2022 <- wide311gro$raw_311_2022-3337.000
+wide311gro$nojump_2022  <- wide311gro$jumpfree_311_2022-52970.79
+
+wide311gro$unadjusted_2023 <- wide311gro$raw_311_2023-2924.083
+wide311gro$nojump_2023 <- wide311gro$jumpfree_311_2023-67335.13
+
+wide311gro$unadjusted_2024 <- wide311gro$raw_311_2024-4723.000
+wide311gro$nojump_2024   <- wide311gro$jumpfree_311_2024-79690.38
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long311gro<- wide311gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long311gro_unadjusted<-long311gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long311gro_nojump<-long311gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+
+#ggplot with each year a separate line: unadjusted
+unadjusted311_factor_yr <- 
+  ggplot(long311gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG DF (ID 311) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted311_factor_yr.png"), 
+       plot = unadjusted311_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump311_factor_yr<-
+  ggplot(long311gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG DF (ID 311) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump311_factor_yr.png"), 
+       plot = nojump311_factor_yr)
+
+unadjusted311_factor_yr
+nojump311_factor_yr
+```
+
+##### 646
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d646$raw_646 <- jump_free_d646$hourly_avg646_raw 
+jump_free_d646$jumpfree_646 <- jump_free_d646$hourly_avg646_0jump
+
+wide646gro<-jump_free_d646|>
+  select(c(raw_646,jumpfree_646,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_646,jumpfree_646),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide646gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide646gro$unadjusted_2018<-wide646gro$raw_646_2018 
+wide646gro$nojump_2018<-wide646gro$jumpfree_646_2018 
+
+wide646gro$unadjusted_2019<-wide646gro$raw_646_2019-3600.333
+wide646gro$nojump_2019<-wide646gro$jumpfree_646_2019-3600.333
+
+wide646gro$unadjusted_2020 <- wide646gro$raw_646_2020-8365.083
+wide646gro$nojump_2020     <- wide646gro$jumpfree_646_2020-8365.333
+
+wide646gro$unadjusted_2021 <- wide646gro$raw_646_2021-14004.67
+wide646gro$nojump_2021      <- wide646gro$jumpfree_646_2021-12486.08
+
+wide646gro$unadjusted_2022 <- wide646gro$raw_646_2022-5758.917
+wide646gro$nojump_2022  <- wide646gro$jumpfree_646_2022-18121.58
+
+wide646gro$unadjusted_2023 <- wide646gro$raw_646_2023-7089.000
+wide646gro$nojump_2023 <- wide646gro$jumpfree_646_2023-22514.58
+
+wide646gro$unadjusted_2024 <- wide646gro$raw_646_2024-11417.58
+wide646gro$nojump_2024   <- wide646gro$jumpfree_646_2024-26843.17
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long646gro<- wide646gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long646gro_unadjusted<-long646gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long646gro_nojump<-long646gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+#ggplot with each year a separate line: unadjusted
+unadjusted646_factor_yr <- 
+  ggplot(long646gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG WH (ID 646) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted646_factor_yr.png"), 
+       plot = unadjusted646_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump646_factor_yr<-
+  ggplot(long646gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="OG WH (ID 646) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump646_factor_yr.png"), 
+       plot = nojump646_factor_yr)
+
+unadjusted646_factor_yr
+nojump646_factor_yr
+```
+
+##### 648
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d648$raw_648 <- jump_free_d648$hourly_avg648_raw 
+jump_free_d648$jumpfree_648 <- jump_free_d648$hourly_avg648_0jump
+
+wide648gro<-jump_free_d648|>
+  select(c(raw_648,jumpfree_648,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_648,jumpfree_648),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide648gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide648gro$unadjusted_2023 <- wide648gro$raw_648_2023-5097.000
+wide648gro$nojump_2023 <- wide648gro$jumpfree_648_2023-5097.000
+#first reading is April 3 but we normalize it anyway
+
+wide648gro$unadjusted_2024 <- wide648gro$raw_648_2024-8609.833
+wide648gro$nojump_2024   <- wide648gro$jumpfree_648_2024-8846.500
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long648gro<- wide648gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long648gro_unadjusted<-long648gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long648gro_nojump<-long648gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+#ggplot with each year a separate line: unadjusted
+unadjusted648_factor_yr <- 
+  ggplot(long648gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+
+  theme_minimal()+
+  labs(title="OG WH (ID 648) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))
+ggsave(here("Plots/unadjusted648_factor_yr.png"), 
+       plot = unadjusted648_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump648_factor_yr<-
+  ggplot(long648gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  theme_minimal()+
+  labs(title="OG WH (ID 648) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))
+ggsave(here("Plots/nojump648_factor_yr.png"), 
+       plot = nojump648_factor_yr)
+
+unadjusted648_factor_yr
+nojump648_factor_yr
+```
+
+##### 651
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d651$raw_651 <- jump_free_d651$hourly_avg651_raw 
+jump_free_d651$jumpfree_651 <- jump_free_d651$hourly_avg651_0jump
+
+wide651gro<-jump_free_d651|>
+  select(c(raw_651,jumpfree_651,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_651,jumpfree_651),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide651gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide651gro$unadjusted_2023 <- wide651gro$raw_651_2023-1680.455
+wide651gro$nojump_2023 <- wide651gro$jumpfree_651_2023-1680.455
+#first reading is April 3 but we normalize it anyway
+
+wide651gro$unadjusted_2024 <- wide651gro$raw_651_2024-6491.167
+wide651gro$nojump_2024   <- wide651gro$jumpfree_651_2024-6491.167
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long651gro<- wide651gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long651gro_unadjusted<-long651gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long651gro_nojump<-long651gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+
+#ggplot with each year a separate line: unadjusted
+unadjusted651_factor_yr <- 
+  ggplot(long651gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  theme_minimal()+
+  labs(title="OG WRC (ID 651) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) 
+ggsave(here("Plots/unadjusted651_factor_yr.png"), 
+       plot = unadjusted651_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump651_factor_yr<-
+  ggplot(long651gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  theme_minimal()+
+  labs(title="OG WRC (ID 651) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))
+ggsave(here("Plots/nojump651_factor_yr.png"), 
+       plot = nojump651_factor_yr)
+
+unadjusted651_factor_yr
+nojump651_factor_yr
+```
+
+##### 652
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d652$raw_652 <- jump_free_d652$hourly_avg652_raw 
+jump_free_d652$jumpfree_652 <- jump_free_d652$hourly_avg652_0jump
+
+wide652gro<-jump_free_d652|>
+  select(c(raw_652,jumpfree_652,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_652,jumpfree_652),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide652gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide652gro$unadjusted_2023 <- wide652gro$raw_652_2023-6909.000
+wide652gro$nojump_2023 <- wide652gro$jumpfree_652_2023-6909.000
+#first reading is April 3 but we normalize it anyway
+
+wide652gro$unadjusted_2024 <- wide652gro$raw_652_2024-9722.083
+wide652gro$nojump_2024   <- wide652gro$jumpfree_652_2024-9722.083
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long652gro<- wide652gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long652gro_unadjusted<-long652gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long652gro_nojump<-long652gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+
+#ggplot with each year a separate line: unadjusted
+unadjusted652_factor_yr <- 
+  ggplot(long652gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  theme_minimal()+
+  labs(title="OG WH (ID 652) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) 
+ggsave(here("Plots/unadjusted652_factor_yr.png"), 
+       plot = unadjusted652_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump652_factor_yr<-
+  ggplot(long652gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  theme_minimal()+
+  labs(title="OG WH (ID 652) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5)))
+ggsave(here("Plots/nojump652_factor_yr.png"), 
+       plot = nojump652_factor_yr)
+
+unadjusted652_factor_yr
+nojump652_factor_yr
+```
+
+##### 654
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d654$raw_654 <- jump_free_d654$hourly_avg654_raw 
+jump_free_d654$jumpfree_654 <- jump_free_d654$hourly_avg654_0jump
+
+wide654gro<-jump_free_d654|>
+  select(c(raw_654,jumpfree_654,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_654,jumpfree_654),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide654gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide654gro$unadjusted_2019<-wide654gro$raw_654_2019-1701.667
+wide654gro$nojump_2019<-wide654gro$jumpfree_654_2019-1701.667
+
+wide654gro$unadjusted_2020 <- wide654gro$raw_654_2020-8065.917
+wide654gro$nojump_2020     <- wide654gro$jumpfree_654_2020-8065.917
+
+wide654gro$unadjusted_2021 <- wide654gro$raw_654_2021-3945.000
+wide654gro$nojump_2021      <- wide654gro$jumpfree_654_2021-17100.69
+
+wide654gro$unadjusted_2022 <- wide654gro$raw_654_2022-2531.000
+wide654gro$nojump_2022  <- wide654gro$jumpfree_654_2022-27357.36
+
+wide654gro$unadjusted_2023 <- wide654gro$raw_654_2023-5525.167
+wide654gro$nojump_2023 <- wide654gro$jumpfree_654_2023-39042.49
+
+wide654gro$unadjusted_2024 <- wide654gro$raw_654_2024-4555.250
+wide654gro$nojump_2024   <- wide654gro$jumpfree_654_2024-48766.91
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long654gro<- wide654gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long654gro_unadjusted<-long654gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long654gro_nojump<-long654gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+#ggplot with each year a separate line: unadjusted
+unadjusted654_factor_yr <- 
+  ggplot(long654gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 654) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted654_factor_yr.png"), 
+       plot = unadjusted654_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump654_factor_yr<-
+  ggplot(long654gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 654) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump654_factor_yr.png"), 
+       plot = nojump654_factor_yr)
+
+unadjusted654_factor_yr
+nojump654_factor_yr
+```
+
+##### 655
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d655$raw_655 <- jump_free_d655$hourly_avg655_raw 
+jump_free_d655$jumpfree_655 <- jump_free_d655$hourly_avg655_0jump
+
+wide655gro<-jump_free_d655|>
+  select(c(raw_655,jumpfree_655,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_655,jumpfree_655),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide655gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide655gro$unadjusted_2019<-wide655gro$raw_655_2019-3178.333
+wide655gro$nojump_2019<-wide655gro$jumpfree_655_2019-3178.333
+
+wide655gro$unadjusted_2020 <- wide655gro$raw_655_2020-10151.67
+wide655gro$nojump_2020     <- wide655gro$jumpfree_655_2020-10151.67
+
+wide655gro$unadjusted_2021 <- wide655gro$raw_655_2021-5935.000
+wide655gro$nojump_2021      <- wide655gro$jumpfree_655_2021-20665.89
+
+wide655gro$unadjusted_2022 <- wide655gro$raw_655_2022-2174.833
+wide655gro$nojump_2022  <- wide655gro$jumpfree_655_2022-32578.31
+
+wide655gro$unadjusted_2023 <- wide655gro$raw_655_2023-2467.000
+wide655gro$nojump_2023 <- wide655gro$jumpfree_655_2023-40936.77
+
+wide655gro$unadjusted_2024 <- wide655gro$raw_655_2024-2475.750
+wide655gro$nojump_2024   <- wide655gro$jumpfree_655_2024-47955.19
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long655gro<- wide655gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long655gro_unadjusted<-long655gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long655gro_nojump<-long655gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+
+#ggplot with each year a separate line: unadjusted
+unadjusted655_factor_yr <- 
+  ggplot(long655gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 655) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted655_factor_yr.png"), 
+       plot = unadjusted655_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump655_factor_yr<-
+  ggplot(long655gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 655) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump655_factor_yr.png"), 
+       plot = nojump655_factor_yr)
+
+unadjusted655_factor_yr
+nojump655_factor_yr
+```
+
+##### 656
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d656$raw_656 <- jump_free_d656$hourly_avg656_raw 
+jump_free_d656$jumpfree_656 <- jump_free_d656$hourly_avg656_0jump
+
+wide656gro<-jump_free_d656|>
+  select(c(raw_656,jumpfree_656,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_656,jumpfree_656),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide656gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide656gro$unadjusted_2019<-wide656gro$raw_656_2019-3566.000
+wide656gro$nojump_2019<-wide656gro$jumpfree_656_2019-3566.000
+
+wide656gro$unadjusted_2020 <- wide656gro$raw_656_2020-9632.000
+wide656gro$nojump_2020     <- wide656gro$jumpfree_656_2020-8592.667
+
+wide656gro$unadjusted_2021 <- wide656gro$raw_656_2021-4416.250
+wide656gro$nojump_2021      <- wide656gro$jumpfree_656_2021-17759.08
+
+wide656gro$unadjusted_2022 <- wide656gro$raw_656_2022-2868.750
+wide656gro$nojump_2022  <- wide656gro$jumpfree_656_2022-27458.50
+
+wide656gro$unadjusted_2023 <- wide656gro$raw_656_2023-4333.167
+wide656gro$nojump_2023 <- wide656gro$jumpfree_656_2023-34599.63
+
+wide656gro$unadjusted_2024 <- wide656gro$raw_656_2024-1968.000
+wide656gro$nojump_2024   <- wide656gro$jumpfree_656_2024-40281.13
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long656gro<- wide656gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long656gro_unadjusted<-long656gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long656gro_nojump<-long656gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+
+#ggplot with each year a separate line: unadjusted
+unadjusted656_factor_yr <- 
+  ggplot(long656gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 656) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted656_factor_yr.png"), 
+       plot = unadjusted656_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump656_factor_yr<-
+  ggplot(long656gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 656) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump656_factor_yr.png"), 
+       plot = nojump656_factor_yr)
+
+unadjusted656_factor_yr
+nojump656_factor_yr
+```
+
+##### 860
+
+```{r}
+#First seelct desired columns from jump_free df and pivot so every year has its own columm
+jump_free_d860$raw_860 <- jump_free_d860$hourly_avg860_raw 
+jump_free_d860$jumpfree_860 <- jump_free_d860$hourly_avg860_0jump
+
+wide860gro<-jump_free_d860|>
+  select(c(raw_860,jumpfree_860,yr,ts,DOY))|>
+  pivot_wider(
+    names_from = yr, 
+    values_from = c(raw_860,jumpfree_860),
+    names_sep="_")|>
+  filter(DOY >= 91, DOY <= 274)
+
+#normalizing columns by getting each year to start at 0 relative to the start of the X axis, e.g., wide860gro normalized in 2019 would have whatever value at DOY 91 = 0 by searching the wide df for "2019-04-01" and recording the value associated with "2019-04-01 00:00:00"
+
+wide860gro$unadjusted_2019<-wide860gro$raw_860_2019
+wide860gro$nojump_2019<-wide860gro$jumpfree_860_2019
+#First reading May 29 so not normalized
+
+wide860gro$unadjusted_2020 <- wide860gro$raw_860_2020-4410.167
+wide860gro$nojump_2020     <- wide860gro$jumpfree_860_2020-4410.167
+
+wide860gro$unadjusted_2021 <- wide860gro$raw_860_2021-11749.50
+wide860gro$nojump_2021      <- wide860gro$jumpfree_860_2021-10942.56
+
+wide860gro$unadjusted_2022 <- wide860gro$raw_860_2022-3391.000
+wide860gro$nojump_2022  <- wide860gro$jumpfree_860_2022-17178.31
+
+wide860gro$unadjusted_2023 <- wide860gro$raw_860_2023-5053.750
+wide860gro$nojump_2023 <- wide860gro$jumpfree_860_2023-24277.02
+
+wide860gro$unadjusted_2024 <- wide860gro$raw_860_2024-10681.33
+wide860gro$nojump_2024   <- wide860gro$jumpfree_860_2024-29904.60
+
+
+#combining back into 1 long df - note cols = code, which distingushes raw and jump-free data 
+long860gro<- wide860gro |>  pivot_longer(
+   cols = starts_with(c("unadjusted_","nojump_")),  
+   names_to = c("adjustment"),
+    values_to = "growth")|>
+  separate(adjustment, into = c("adjustment", "yr"), sep = "_")
+
+long860gro_unadjusted<-long860gro|>filter(
+      adjustment=="unadjusted")|>select(
+    c(ts,DOY,yr,growth))
+
+long860gro_nojump<-long860gro|>filter(
+      adjustment=="nojump")|>select(
+    c(ts,DOY,yr,growth))
+
+#ggplot with each year a separate line: unadjusted
+unadjusted860_factor_yr <- 
+  ggplot(long860gro_unadjusted, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 860) Raw Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/unadjusted860_factor_yr.png"), 
+       plot = unadjusted860_factor_yr)
+
+
+#ggplot with each year a separate line: jump-free
+nojump860_factor_yr<-
+  ggplot(long860gro_nojump, aes(
+  x = DOY, y = growth, color = as.factor(yr)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = 176, linetype = "dashed", color = "black")+
+  theme_minimal()+
+  labs(title="2° DF (ID 860) Jump-Free Circumference Change: April1-Oct 1",
+      x="Day of Year",
+      y="Stem Circumference Change (µm)",
+      color="Legend") + 
+  scale_color_manual(values = HD_colors) + 
+  guides(color=guide_legend(override.aes = list(
+            alpha = 1, size = 5))) +
+  annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
+ggsave(here("Plots/nojump860_factor_yr.png"), 
+       plot = nojump860_factor_yr)
+
+unadjusted860_factor_yr
+nojump860_factor_yr
 ```
 
 # Step 2.1 (optional): Adjusting temporal resolution via dendro.resample
@@ -364,13 +1827,13 @@ dendro.resample(df, by, value)
 
 ### Explanation of options
 
-+--------------+--------------------------------------------------------------------------------------------+
-| `df`         | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`.  |
-+--------------+--------------------------------------------------------------------------------------------+
-| `by`         | either *H, D, W* or *M* to resample data into hourly, daily, weekly or monthly resolution. |
-+--------------+--------------------------------------------------------------------------------------------+
-| `value`      | either *max, min*, *mean* or *sum* for the resampling value.                               |
-+--------------+--------------------------------------------------------------------------------------------+
++------------+--------------------------------------------------------------------------------------------+
+| `df`       | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`.  |
++------------+--------------------------------------------------------------------------------------------+
+| `by`       | either *H, D, W* or *M* to resample data into hourly, daily, weekly or monthly resolution. |
++------------+--------------------------------------------------------------------------------------------+
+| `value`    | either *max, min*, *mean* or *sum* for the resampling value.                               |
++------------+--------------------------------------------------------------------------------------------+
 
 ```{r}
 # To resample monthly with maximum value
@@ -407,7 +1870,7 @@ dendro.truncate(df, CalYear, DOY)
 #...10 2017-01-20 09:00:00 64.96733 48.88450
 ```
 
-# Phase differentiation using two approaches
+# Step 3.1: Phase differentiation
 
 ```         
 phase.sc(df, TreeNum, smoothing = NULL) 
@@ -419,13 +1882,13 @@ three phases in this approach: 1) Shrinkage, when the dendrometer reading is les
 
 **plot_SC_output( SC_output, DOY, Year, cols = c("#fee8c8", "#fdbb84", "#e34a33"), phNames = c("Shrinkage", "Expansion", "Increment") )**
 
-+------------+----------------------------------------------------------------------------------------------------------------+
-| `DOY`      | array with initial and final day for plotting. E.g. *c(a,b)*, where a = initial date and b = final date.       |
-+------------+----------------------------------------------------------------------------------------------------------------+
-| `cols`     | array of three elements: colour for each phases.                                                               |
-+------------+----------------------------------------------------------------------------------------------------------------+
-| `phNames`  | array with three elements for three different phases. Default is **"Shrinkage", "Expansion" and "Increment"**. |
-+------------+----------------------------------------------------------------------------------------------------------------+
++-----------+----------------------------------------------------------------------------------------------------------------+
+| `DOY`     | array with initial and final day for plotting. E.g. *c(a,b)*, where a = initial date and b = final date.       |
++-----------+----------------------------------------------------------------------------------------------------------------+
+| `cols`    | array of three elements: colour for each phases.                                                               |
++-----------+----------------------------------------------------------------------------------------------------------------+
+| `phNames` | array with three elements for three different phases. Default is **"Shrinkage", "Expansion" and "Increment"**. |
++-----------+----------------------------------------------------------------------------------------------------------------+
 
 ### Inputs for phase.sc:
 
@@ -501,7 +1964,7 @@ zg_311<-phase.zg(df=d311_hourly,TreeNum = 1)
 plot_ZG_output(zg_311,DOY = c(91,274),Year = 2021)
 ```
 
-# Daily stats: Calculating and making amplitude plots (max-min) from daily.data.patched
+# Step 3.2: Daily stats: Calculating and making amplitude plots (max-min) from daily.data.patched
 
 See "Code to run at launch" section for details on daily.data vs daily.data.patched
 
@@ -581,7 +2044,7 @@ raw311amp <- ggplot(
 raw311amp
 ```
 
-# Relative Dry Growth During Climate Adverse events with clim.twd
+# Step 3.3: Relative Dry Growth During Climate Adverse events with clim.twd
 
 ```         
 clim.twd(df,   Clim,   dailyValue = "max",   thresholdClim = "<10",   thresholdDays = ">5",   showPlot = TRUE ) 
@@ -629,14 +2092,14 @@ relative_dry_growth_jf309<-clim.twd(
   showPlot=TRUE)
 ```
 
-#### Plotting new data to see the difference:
-
 # One curve per dendro: raw vs jump-free
+
+#### Stat Comparisons:
 
 ```{r}
 #dataframe with just the AVG dendrometer value
 JustDendros<-data_prep524|>select(c(
- Date,DEND309_AVG_4200_0_01,DEND310_AVG_150_0_01,DEND311_AVG_150_0_01,DEND646_AVG_150_0_01,DEND648_AVG_150_0_01,DEND652,DEND654_AVG_150_0_01,DEND655_AVG_150_0_01,DEND656_AVG_150_0_01,DEND860_AVG_150_0_01))
+ Date,DEND309_AVG_4200_0_01,DEND310_AVG_150_0_01,DEND311_AVG_150_0_01,DEND646_AVG_150_0_01,DEND648_AVG_150_0_01,DEND651_AVG_150_0_01,DEND652_AVG_150_0_01,DEND654_AVG_150_0_01,DEND655_AVG_150_0_01,DEND656_AVG_150_0_01,DEND860_AVG_150_0_01))
 
 JustDendros_long<-
 
