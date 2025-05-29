@@ -428,10 +428,10 @@ jump_free_d651$DOY <- yday(jump_free_d651$ts)
 
 ### Plots to see the difference
 
-#### Plot type 1: 1 curve per dendrometer 
+#### Plot type 1: 1 curve per dendrometer
 
 First define growing season for each year and Heat Dome line\
-Second define raw and jump free ggplots \
+Second define raw and jump free ggplots\
 Third make a figure with raw and jump free plots next to each other
 
 ```{r}
@@ -476,7 +476,7 @@ jump_free309_1curve <- ggplot(
 gridExtra::grid.arrange(raw309_1curve,jump_free309_1curve)
 two_1curve_plots309 <- 
   gridExtra::grid.arrange(raw309_1curve,jump_free309_1curve)
-ggsave(here("Plots/two_1curve_plots309.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots309.png"), 
        plot = two_1curve_plots309)
 
 
@@ -510,7 +510,7 @@ jump_free310_1curve <- ggplot(
 gridExtra::grid.arrange(raw310_1curve,jump_free310_1curve)
 two_1curve_plots310 <- 
   gridExtra::grid.arrange(raw310_1curve, jump_free310_1curve)
-ggsave(here("Plots/two_1curve_plots310.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots310.png"), 
        plot = two_1curve_plots310)
 
 #311
@@ -543,7 +543,7 @@ jump_free311_1curve <- ggplot(
 gridExtra::grid.arrange(raw311_1curve,jump_free311_1curve)
 two_1curve_plots311 <- 
   gridExtra::grid.arrange(raw311_1curve, jump_free311_1curve)
-ggsave(here("Plots/two_1curve_plots311.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots311.png"), 
        plot = two_1curve_plots311)
 
 #646
@@ -576,7 +576,7 @@ jump_free646_1curve <- ggplot(
 gridExtra::grid.arrange(raw646_1curve,jump_free646_1curve)
 two_1curve_plots646 <- 
   gridExtra::grid.arrange(raw646_1curve, jump_free646_1curve)
-ggsave(here("Plots/two_1curve_plots646.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots646.png"), 
        plot = two_1curve_plots646)
 
 #648
@@ -613,7 +613,7 @@ jump_free648_1curve <- ggplot(
 gridExtra::grid.arrange(raw648_1curve,jump_free648_1curve)
 two_1curve_plots648 <- 
   gridExtra::grid.arrange(raw648_1curve, jump_free648_1curve)
-ggsave(here("Plots/two_1curve_plots648.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots648.png"), 
        plot = two_1curve_plots648)
 
 #651
@@ -650,7 +650,7 @@ jump_free651_1curve <- ggplot(
 gridExtra::grid.arrange(raw651_1curve,jump_free651_1curve)
 two_1curve_plots651 <- 
   gridExtra::grid.arrange(raw651_1curve, jump_free651_1curve)
-ggsave(here("Plots/two_1curve_plots651.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots651.png"), 
        plot = two_1curve_plots651)
 
 #652
@@ -687,7 +687,7 @@ jump_free652_1curve <- ggplot(
 gridExtra::grid.arrange(raw652_1curve,jump_free652_1curve)
 two_1curve_plots652 <-
   gridExtra::grid.arrange(raw652_1curve, jump_free652_1curve)
-ggsave(here("Plots/two_1curve_plots652.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots652.png"), 
        plot = two_1curve_plots652)
 
 #654 
@@ -720,7 +720,7 @@ jump_free654_1curve <- ggplot(
 gridExtra::grid.arrange(raw654_1curve,jump_free654_1curve)
 two_1curve_plots654 <- 
   gridExtra::grid.arrange(raw654_1curve, jump_free654_1curve)
-ggsave(here("Plots/two_1curve_plots654.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots654.png"), 
        plot = two_1curve_plots654)
 
 #655
@@ -753,7 +753,7 @@ jump_free655_1curve <- ggplot(
 gridExtra::grid.arrange(raw655_1curve,jump_free655_1curve)
 two_1curve_plots655 <- 
   gridExtra::grid.arrange(raw655_1curve, jump_free655_1curve)
-ggsave(here("Plots/two_1curve_plots655.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots655.png"), 
        plot = two_1curve_plots655)
 
 #656
@@ -786,7 +786,7 @@ jump_free656_1curve <- ggplot(
 gridExtra::grid.arrange(raw656_1curve,jump_free656_1curve)
 two_1curve_plots656 <- 
   gridExtra::grid.arrange(raw656_1curve, jump_free656_1curve)
-ggsave(here("Plots/two_1curve_plots656.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots656.png"), 
        plot = two_1curve_plots656)
 
 #860
@@ -819,7 +819,7 @@ jump_free860_1curve <- ggplot(
 gridExtra::grid.arrange(raw860_1curve,jump_free860_1curve)
 two_1curve_plots860 <- 
   gridExtra::grid.arrange(raw860_1curve, jump_free860_1curve)
-ggsave(here("Plots/two_1curve_plots860.png"), 
+ggsave(here("Plots/1-Curve Per Dendro/two_1curve_plots860.png"), 
        plot = two_1curve_plots860)
 
 ```
@@ -903,7 +903,7 @@ unadjusted309_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted309_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted309_factor_yr.png"), 
        plot = unadjusted309_factor_yr)
 
 
@@ -922,7 +922,7 @@ nojump309_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump309_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump309_factor_yr.png"), 
        plot = nojump309_factor_yr)
 
 unadjusted309_factor_yr
@@ -998,7 +998,7 @@ unadjusted310_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted310_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted310_factor_yr.png"), 
        plot = unadjusted310_factor_yr)
 
 
@@ -1017,7 +1017,7 @@ nojump310_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump310_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump310_factor_yr.png"), 
        plot = nojump310_factor_yr)
 
 unadjusted310_factor_yr
@@ -1094,7 +1094,7 @@ unadjusted311_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted311_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted311_factor_yr.png"), 
        plot = unadjusted311_factor_yr)
 
 
@@ -1113,7 +1113,7 @@ nojump311_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump311_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump311_factor_yr.png"), 
        plot = nojump311_factor_yr)
 
 unadjusted311_factor_yr
@@ -1189,7 +1189,7 @@ unadjusted646_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted646_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted646_factor_yr.png"), 
        plot = unadjusted646_factor_yr)
 
 
@@ -1208,7 +1208,7 @@ nojump646_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump646_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump646_factor_yr.png"), 
        plot = nojump646_factor_yr)
 
 unadjusted646_factor_yr
@@ -1268,7 +1268,7 @@ unadjusted648_factor_yr <-
   scale_color_manual(values = HD_colors) + 
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5)))
-ggsave(here("Plots/unadjusted648_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted648_factor_yr.png"), 
        plot = unadjusted648_factor_yr)
 
 
@@ -1285,7 +1285,7 @@ nojump648_factor_yr<-
   scale_color_manual(values = HD_colors) + 
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5)))
-ggsave(here("Plots/nojump648_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump648_factor_yr.png"), 
        plot = nojump648_factor_yr)
 
 unadjusted648_factor_yr
@@ -1346,7 +1346,7 @@ unadjusted651_factor_yr <-
   scale_color_manual(values = HD_colors) + 
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) 
-ggsave(here("Plots/unadjusted651_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted651_factor_yr.png"), 
        plot = unadjusted651_factor_yr)
 
 
@@ -1363,7 +1363,7 @@ nojump651_factor_yr<-
   scale_color_manual(values = HD_colors) + 
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5)))
-ggsave(here("Plots/nojump651_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump651_factor_yr.png"), 
        plot = nojump651_factor_yr)
 
 unadjusted651_factor_yr
@@ -1424,7 +1424,7 @@ unadjusted652_factor_yr <-
   scale_color_manual(values = HD_colors) + 
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) 
-ggsave(here("Plots/unadjusted652_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted652_factor_yr.png"), 
        plot = unadjusted652_factor_yr)
 
 
@@ -1441,7 +1441,7 @@ nojump652_factor_yr<-
   scale_color_manual(values = HD_colors) + 
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5)))
-ggsave(here("Plots/nojump652_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump652_factor_yr.png"), 
        plot = nojump652_factor_yr)
 
 unadjusted652_factor_yr
@@ -1514,7 +1514,7 @@ unadjusted654_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted654_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted654_factor_yr.png"), 
        plot = unadjusted654_factor_yr)
 
 
@@ -1533,7 +1533,7 @@ nojump654_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump654_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump654_factor_yr.png"), 
        plot = nojump654_factor_yr)
 
 unadjusted654_factor_yr
@@ -1607,7 +1607,7 @@ unadjusted655_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted655_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted655_factor_yr.png"), 
        plot = unadjusted655_factor_yr)
 
 
@@ -1626,7 +1626,7 @@ nojump655_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump655_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump655_factor_yr.png"), 
        plot = nojump655_factor_yr)
 
 unadjusted655_factor_yr
@@ -1700,7 +1700,7 @@ unadjusted656_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted656_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted656_factor_yr.png"), 
        plot = unadjusted656_factor_yr)
 
 
@@ -1719,7 +1719,7 @@ nojump656_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump656_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump656_factor_yr.png"), 
        plot = nojump656_factor_yr)
 
 unadjusted656_factor_yr
@@ -1793,7 +1793,7 @@ unadjusted860_factor_yr <-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/unadjusted860_factor_yr.png"), 
+ggsave(here("Plots/Raw Normalized-1 Annual Line/unadjusted860_factor_yr.png"), 
        plot = unadjusted860_factor_yr)
 
 
@@ -1812,7 +1812,7 @@ nojump860_factor_yr<-
   guides(color=guide_legend(override.aes = list(
             alpha = 1, size = 5))) +
   annotate("text",x=180,y=-500,label="Onset of Heat Dome",color="black")
-ggsave(here("Plots/nojump860_factor_yr.png"), 
+ggsave(here("Plots/Jump-Free Normalized-1 Annual Line/nojump860_factor_yr.png"), 
        plot = nojump860_factor_yr)
 
 unadjusted860_factor_yr
@@ -1890,7 +1890,7 @@ three phases in this approach: 1) Shrinkage, when the dendrometer reading is les
 | `phNames` | array with three elements for three different phases. Default is **"Shrinkage", "Expansion" and "Increment"**. |
 +-----------+----------------------------------------------------------------------------------------------------------------+
 
-### Inputs for phase.sc:
+### Phase.sc inputs:
 
 +-------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `df`        | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. It should contain data with constant temporal resolution for best results.                                                                                                                    |
@@ -1902,11 +1902,182 @@ three phases in this approach: 1) Shrinkage, when the dendrometer reading is les
 
 Outputs a list of two dataframes. The first dataframe *SC_cycle* with cyclic phases along with various statistics and the second dataframe *SC_phase* with assigned phases for each data point.The dataframe *SC_cycle* contains the beginning, end, duration, magnitude and rate of each phase. The dataframe *SC_phase* contains time and corresponding phases during that time.
 
-```         
-phase.zg(df, TreeNum) 
+#### Testing Stem-cycle approach: which method to use (settled on jump-free default=0 smoothing)
+
+```{r}
+#309 raw - no smoothing
+sc_d309_S0<-phase.sc(df=d309_hourly,TreeNum = 1)
+sc_d309_plot_S0<-plot_SC_output(
+  sc_d309_S0,DOY = c(169,183),Year = 2021,cols = c("red","green","blue"))
+
+#309 raw - max smoothing
+sc_d309_S12<-phase.sc(df=d309_hourly,TreeNum = 1,smoothing = 12)
+sc_d309_plot_S12<-plot_SC_output(
+  sc_d309_S12,DOY = c(169,183),Year = 2021,cols = c("red","green","blue"))
+sc_d309_plot_S0
+sc_d309_plot_S12
+
+#309 jump-free - no smoothing
+sc_d309_jf_S0<-phase.sc(df=jump_free_d309,TreeNum = 1)
+sc_d309_jf_plot_S0<-plot_SC_output(
+  sc_d309_jf_S0,DOY = c(169,183),Year = 2021,cols = c("red","green","blue"))
+
+#309 jump-free - max smoothing
+sc_d309_jf_S12<-phase.sc(df=jump_free_d309,TreeNum = 1,smoothing = 12)
+sc_d309_jf_plot_S12<-plot_SC_output(
+  sc_d309_jf_S12,DOY = c(169,183),Year = 2021,cols = c("red","green","blue"))
+
+sc_d309_jf_plot_S0
+sc_d309_jf_plot_S12
 ```
 
-### Explanation of options for zero-growth approach
+#### Plot for Stem-cycle approach: (using jump-free default=0 smoothing)
+
+```{r}
+#309 
+sc_d309<-phase.sc(df=jump_free_d309,TreeNum = 1)
+sc_d309_2021plot<-plot_SC_output(
+  sc_d309,DOY = c(169,183),Year = 2021,cols = c("red","green","blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d309_2021plot.png"), 
+       plot = sc_d309_2021plot)
+
+#310 
+sc_d310 <- phase.sc(df = jump_free_d310, TreeNum = 1)
+sc_d310_2021plot_2wks <- plot_SC_output(
+  sc_d310, DOY = c(162, 190), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d310_2021plot_2wks.png"), 
+       plot = sc_d310_2021plot_2wks)
+
+#311 - june 11 - july 9
+sc_d311 <- phase.sc(df = jump_free_d311, TreeNum = 1)
+sc_d311_2021plot_2wks <- plot_SC_output(
+  sc_d311, DOY = c(162, 190), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d311_2021plot_2wks.png"), 
+       plot = sc_d311_2021plot_2wks)
+
+#646 
+sc_d646 <- phase.sc(df = jump_free_d646, TreeNum = 1)
+sc_d646_2021plot <- plot_SC_output(
+  sc_d646, DOY = c(169, 183), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d646_2021plot.png"), 
+       plot = sc_d646_2021plot)
+
+#648 
+sc_d648 <- phase.sc(df = jump_free_d648, TreeNum = 1)
+sc_d648_2023plot <- plot_SC_output(
+  sc_d648, DOY = c(169, 183), Year = 2023, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d648_2023plot.png"), 
+       plot = sc_d648_2023plot)
+
+#651 
+sc_d651 <- phase.sc(df = jump_free_d651, TreeNum = 1)
+sc_d651_2023plot <- plot_SC_output(
+  sc_d651, DOY = c(169, 183), Year = 2023, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d651_2023plot.png"), 
+       plot = sc_d651_2023plot)
+
+#652 
+sc_d652 <- phase.sc(df = jump_free_d652, TreeNum = 1)
+sc_d652_2023plot <- plot_SC_output(
+  sc_d652, DOY = c(169, 183), Year = 2023, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d652_2023plot.png"), 
+       plot = sc_d652_2023plot)
+
+#654
+sc_d654 <- phase.sc(df = jump_free_d654, TreeNum = 1)
+sc_d654_2021plot <- plot_SC_output(
+  sc_d654, DOY = c(169, 183), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d654_2021plot.png"), 
+       plot = sc_d654_2021plot)
+
+#655 
+sc_d655 <- phase.sc(df = jump_free_d655, TreeNum = 1)
+sc_d655_2021plot <- plot_SC_output(
+  sc_d655, DOY = c(169, 183), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d655_2021plot.png"), 
+       plot = sc_d655_2021plot)
+
+#656
+sc_d656 <- phase.sc(df = jump_free_d656, TreeNum = 1)
+sc_d656_2021plot <- plot_SC_output(
+  sc_d656, DOY = c(169, 183), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d656_2021plot.png"), 
+       plot = sc_d656_2021plot)
+
+#860
+sc_d860 <- phase.sc(df = jump_free_d860, TreeNum = 1)
+sc_d860_2021plot_2wks <- plot_SC_output(
+  sc_d860, DOY = c(162, 190), Year = 2021, cols = c("red", "green", "blue"))
+ggsave(here("Plots/Stem-Cycle Plots/sc_d860_2021plot_2wks.png"), 
+       plot = sc_d860_2021plot_2wks)
+
+sc_d309_2021plot
+sc_d310_2021plot
+sc_d311_2021plot
+sc_d646_2021plot
+sc_d648_2023plot
+sc_d651_2023plot
+sc_d652_2023plot
+sc_d654_2021plot
+sc_d655_2021plot
+sc_d656_2021plot
+sc_d860_2021plot
+```
+
+#### Stem-Cycle approach analyses from table output above
+
+```{r}
+sc_d309_df<-sc_d309[["SC_cycle"]]
+
+#phase start time vs magnitude, diff color for phase
+sc_d309_MagPlot<-
+  ggplot(sc_d309_df, aes(
+  x = Start, y = Magnitude, color = as.factor(Phases)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = vline_HD, linetype = "dashed", color = "black")+
+  theme_minimal()
+sc_d309_MagPlot
+
+#phase start time vs magnitude, increment phase only
+sc_d309_increment<-sc_d309_df|>filter(Phases=="3")
+sc_d309_increment_MagPlot<-
+  ggplot(sc_d309_df, aes(
+  x = Start, y = Magnitude))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = vline_HD, linetype = "dashed", color = "black")+
+  theme_minimal()
+sc_d309_increment_MagPlot
+
+#phases vs magnitude 
+ggplot(sc_d309_df, aes(
+  x = Phases, y = Magnitude, color = as.factor(Phases)))+ 
+  geom_point(alpha=0.5)
+
+
+sc_d310_df<-sc_d310[["SC_cycle"]]|>filter(Phases=="3")
+
+#phase start time vs rate, increment phase only
+sc_d310_RatePlot3<-
+  ggplot(sc_d310_df, aes(
+  x = Start, y = rate))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = vline_HD, linetype = "dashed", color = "black")+
+  theme_minimal()
+sc_d310_RatePlot3
+
+
+zg_d310_df<-zg_d310[["ZG_cycle"]]
+#phase start time vs magnitude, diff color for phase
+zg_d310_MagPlot<-
+  ggplot(zg_d310_df, aes(
+  x = Start, y = Magnitude, color = as.factor(Phases)))+ 
+  geom_point(alpha=0.5)+ 
+  geom_vline(xintercept = vline_HD, linetype = "dashed", color = "black")+
+  theme_minimal()
+zg_d310_MagPlot
+```
+
+### Inputs for zero-growth approach
 
 +-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `df`      | dataframe with first column containing date and time in the format `yyyy-mm-dd HH:MM:SS`. It should contain data with constant temporal resolution for best results. |
@@ -1922,6 +2093,8 @@ Output can be plotted with th following code:
 plot_ZG_output(ZG_output, DOY, Year) 
 ```
 
+### Explanation of options for zero-growth approach
+
 +-------------+----------------------------------------------------------------------------------------------------------+
 | `ZG_output` | list the output of `phase.zg` function.                                                                  |
 +-------------+----------------------------------------------------------------------------------------------------------+
@@ -1932,39 +2105,102 @@ plot_ZG_output(ZG_output, DOY, Year)
 
 Two subplots with GRO and TWD respectively.
 
-```{r}
-#SC Example
-sc.phase<-phase.sc(df=d309_hourly, TreeNum=1, smoothing=12, outputplot=TRUE, days=c(150,160))
+Since DOY 176 is HD and these plots prefer smaller time scales, we are going to do +/- 1 week (DOY 169-183)
 
-#ZG Example
-zg.phase<-phase.zg(df=gf_nepa17, TreeNum=1, outputplot=TRUE, days=c(150,160))
-```
+#### Zero-growth approach: (using jump-free hourly data)
 
 ```{r}
-#raw - no smoothing
-sc_d309<-phase.sc(df=d309_daily,TreeNum = 1,smoothing = 1)
-sc_d309_plot_S1<-plot_SC_output(sc_d309,DOY = c(91,274),Year = 2021,cols = c("red","green","blue"))
+#309 - plot looks weird
+zg_d309<-phase.zg(df=jump_free_d309,TreeNum = 1)
+zg_d309_2021plot<-plot_ZG_output(zg_d309,DOY = c(169,183),Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d309_2021plot.png"), 
+       plot = zg_d309_2021plot)
 
-#raw - max smoothing
-sc_d309<-phase.sc(df=d309_daily,TreeNum = 1,smoothing = 12)
-sc_d309_plot_S12<-plot_SC_output(sc_d309,DOY = c(91,274),Year = 2021,cols = c("red","green","blue"))
-sc_d309_plot_S1
-sc_d309_plot_S12
+#310
+zg_d310<-phase.zg(df=jump_free_d310,TreeNum = 1)
+zg_d310_2021plot_2wks<-plot_ZG_output(zg_d310,DOY = c(162,190),Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d310_2021plot_2wks.png"), 
+       plot = zg_d310_2021plot_2wks)
 
-#jump-free
-#sc_d309_jf<-phase.sc(df=jump_free_d309_noNA,TreeNum = 1,smoothing = 1)
-#sc_d309_jf_plot<-plot_SC_output(sc_d309_jf,DOY = c(91,274),Year = 2021,cols = c("red","green","blue"))
-#sc_d309_jf_plot
+#311
+zg_d311 <- phase.zg(df = jump_free_d311, TreeNum = 1)
+zg_d311_2021plot_2wks <- plot_ZG_output(zg_d311, DOY = c(162,190), Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d311_2021plot_2wks.png"), 
+       plot = zg_d311_2021plot_2wks)
 
-#zero-growth approach: looks very strange
-zg_309<-phase.zg(df=d309_daily,TreeNum = 1)
-plot_ZG_output(zg_309,DOY = c(91,274),Year = 2021)
+#646
+zg_d646 <- phase.zg(df = jump_free_d646, TreeNum = 1)
+zg_d646_2021plot <- plot_ZG_output(zg_d646, DOY = c(169,183), Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d646_2021plot.png"), 
+       plot = zg_d646_2021plot)
 
-zg_311<-phase.zg(df=d311_hourly,TreeNum = 1)
-plot_ZG_output(zg_311,DOY = c(91,274),Year = 2021)
+#648 - installed 2023
+zg_d648 <- phase.zg(df = jump_free_d648, TreeNum = 1)
+zg_d648_2023plot <- plot_ZG_output(zg_d648, DOY = c(169,183), Year = 2023)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d648_2023plot.png"), 
+       plot = zg_d648_2023plot)
+
+#651 - installed 2023
+zg_d651 <- phase.zg(df = jump_free_d651, TreeNum = 1)
+zg_d651_2023plot <- plot_ZG_output(zg_d651, DOY = c(169,183), Year = 2023)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d651_2023plot.png"), 
+       plot = zg_d651_2023plot)
+
+#652 - installed 2023
+zg_d652 <- phase.zg(df = jump_free_d652, TreeNum = 1)
+zg_d652_2023plot <- plot_ZG_output(zg_d652, DOY = c(169,183), Year = 2023)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d652_2023plot.png"), 
+       plot = zg_d652_2023plot)
+
+#654
+zg_d654 <- phase.zg(df = jump_free_d654, TreeNum = 1)
+zg_d654_2021plot <- plot_ZG_output(zg_d654, DOY = c(169,183), Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d654_2021plot.png"), 
+       plot = zg_d654_2021plot)
+
+#655
+zg_d655 <- phase.zg(df = jump_free_d655, TreeNum = 1)
+zg_d655_2021plot <- plot_ZG_output(zg_d655, DOY = c(169,183), Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d655_2021plot.png"), 
+       plot = zg_d655_2021plot)
+
+#656
+zg_d656 <- phase.zg(df = jump_free_d656, TreeNum = 1)
+zg_d656_2021plot <- plot_ZG_output(zg_d656, DOY = c(169,183), Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d656_2021plot.png"), 
+       plot = zg_d656_2021plot)
+
+#860
+zg_d860 <- phase.zg(df = jump_free_d860, TreeNum = 1)
+zg_d860_2021plot_2wks <- plot_ZG_output(zg_d860, DOY = c(162,190), Year = 2021)
+#saving plot
+ggsave(here("Plots/Zero-Growth Plots/zg_d860_2021plot_2wks.png"), 
+       plot = zg_d860_2021plot_2wks)
+
+zg_d309_2021plot
+zg_d310_2021plot
+zg_d311_2021plot
+zg_d646_2021plot
+zg_d648_2023plot
+zg_d651_2023plot
+zg_d652_2023plot
+zg_d654_2021plot
+zg_d655_2021plot
+zg_d656_2021plot
+zg_d860_2021plot
 ```
 
-# Step 3.2: Daily stats: Calculating and making amplitude plots (max-min) from daily.data.patched
+# Step 3.2: Daily stats: Calculating and making amplitude plots (max-min) from daily.data using jump-free datay
 
 See "Code to run at launch" section for details on daily.data vs daily.data.patched
 
@@ -1974,74 +2210,334 @@ daily.data(df, TreeNum)
 
 This function calculates various statistics of dendrometer data on a daily basis. The daily statistics includes the daily maximum and minimum with their corresponding times and daily amplitude (difference between daily maximum and minimum). See King et al. (2013) for details. Output is a dataframe with the daily statistics of the dendrometer data and Remarks = "\*" if Time_max \> Time_min otherwise "".
 
+## Amplitude over time
+
 ```{r}
 # 309
-daily_stats309<-daily.data.patched(df=d309_hourly, TreeNum=1)
+#adding new column to clearly define Remarks for plotting 
+daily_stats309<-daily.data(df=jump_free_d309, TreeNum=1)|>
+   mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))|>
+#clarifying sign of amplitude so we don't have to plot by Remark
+  mutate(amplitude_signed = case_when(
+    Remarks == "*" ~ amplitude,
+    Remarks == ""  ~ -amplitude))
+
+|>
+#adding approximate season halves with summer solstice (june 20=DOY171) separating the two in line with D'Orangeville's 50% of growth separator being around this time (June 19) - chronological halfway point would be July 1=DOY182, however (non leap year scale)
+    mutate(season_half = case_when(
+    doy >= 91 & doy <= 171 ~ "First Half",
+    doy >= 172 & doy <= 274 ~ "Second Half"))
+  
+  
+#setting up for DOY 
 daily_stats309$yr <- format(
   daily_stats309$DATE, "%Y")
 daily_stats309$yr<-as.factor(daily_stats309$yr)
 daily_stats309$DOY<-yday(daily_stats309$DATE)
 
-raw309amp <- ggplot(
-  daily_stats309,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
-      title="HJA Douglas-fir (ID 309) Daily Net Circumference Change",
-      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
-      color="Legend") + scale_color_manual(
-        values = custom_colors) + guides(
-          color=guide_legend(override.aes = list(
-            alpha = 1, size = 5)))+ geom_vline(
-              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,900)+xlim(91,274)
-raw309amp
+  mutate(season_half = case_when(
+    doy >= 100 & doy <= 200 ~ "First Half",
+    doy >= 201 & doy <= 300 ~ "Second Half",
+    TRUE ~ NA_character_
+  ))
 
-jump_free_309amp <- ggplot(
-  daily_stats309,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
-      title="HJA Douglas-fir (ID 309) Daily Net Circumference Change",
-      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
-      color="Legend") + scale_color_manual(
-        values = custom_colors) + guides(
-          color=guide_legend(override.aes = list(
-            alpha = 1, size = 5)))+ geom_vline(
-              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,900)+xlim(91,274)
-jump_free_309amp
-
+#amplitude plot all years and distinguishing remarks
+ggplot(
+  daily_stats309,aes(x=as.POSIXct(DATE),y=amplitude_signed,color=Remarks_Description))+
+  geom_point()+  
+  geom_vline(xintercept = as.numeric(vline_HD), 
+             linetype = "solid", color = "black")+
+  labs(title="OG DF (ID 309) Daily Circ. Change",
+      x="Date",y="Daily Stem Circumference Change (µm)",
+      color="Time of Max. Circ. Value") + 
+  guides(color=guide_legend(override.aes = list(alpha = 1, size = 5)))+
+  theme_minimal()+
+  annotate("text",
+           x=as.POSIXct(vline_HD),y=-50,label="Onset of Heat Dome",color="black")
 
 
 
 # 310
-daily_stats310<-daily.data.patched(df=d310_hourly, TreeNum=1)
-daily_stats310$yr <- format(
-  daily_stats310$DATE, "%Y")
-daily_stats310$yr<-as.factor(daily_stats310$yr)
-daily_stats310$DOY<-yday(daily_stats310$DATE)
+#adding new column to clearly define Remarks for plotting 
+daily_stats310 <- daily.data(df = jump_free_d310, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))|>
+#add column for daily max change
+    mutate(max_diff = Max - lag(Max))|>
+#clarifying sign of amplitude so we don't have to plot by Remark
+  mutate(amplitude_signed = case_when(
+    Remarks == "*" ~ amplitude,
+    Remarks == ""  ~ -amplitude))
 
-raw310amp <- ggplot(
-  daily_stats310,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
-      title="HJA Douglas-fir (ID 310) Daily Net Circumference Change",
-      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
-      color="Legend") + scale_color_manual(
-        values = custom_colors) + guides(
-          color=guide_legend(override.aes = list(
-            alpha = 1, size = 5)))+ geom_vline(
-              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,550)+xlim(91,274)
-raw310amp
+#setting up for DOY annual analysis if desired
+daily_stats310$yr <- format(daily_stats310$DATE, "%Y")
+daily_stats310$yr <- as.factor(daily_stats310$yr)
+daily_stats310$DOY <- yday(daily_stats310$DATE)
+
+ggplot(daily_stats310,aes(x=amplitude_signed))+geom_histogram()+theme_minimal()+
+  labs(title = "OG DF (ID 310) Histogram of Circ. Amp",
+       x = "Daily Growth Ampltiude", y = NULL)
+
+#plotting changes in daily max
+ggplot(daily_stats310, aes(x = as.POSIXct(DATE), y = max_diff)) +
+  geom_line() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "OG DF (ID 310) Changes in Daily Max. Circ.",
+       x = "Date", y = "(Max Day N) - (Max Day N-1)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = 300, label = "Onset of Heat Dome", color = "black") +   
+  xlim(as.POSIXct("2021-06-11"), as.POSIXct("2021-07-09"))
+
+#amplitude plot all years and distinguishing remarks
+ggplot(daily_stats310, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "OG DF (ID 310) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
+
 
 # 311
-daily_stats311<-daily.data.patched(df=d311_hourly, TreeNum=1)
-daily_stats311$yr <- format(
-  daily_stats311$DATE, "%Y")
-daily_stats311$yr<-as.factor(daily_stats311$yr)
-daily_stats311$DOY<-yday(daily_stats311$DATE)
+daily_stats311 <- daily.data(df = jump_free_d311, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))|>
+#clarifying sign of amplitude so we don't have to plot by Remark
+  mutate(amplitude_signed = case_when(
+    Remarks == "*" ~ amplitude,
+    Remarks == ""  ~ -amplitude))
 
-raw311amp <- ggplot(
-  daily_stats311,aes(x=DOY,y=amplitude,color=factor(yr)))+geom_point()+labs(
-      title="HJA Douglas-fir (ID 311) Daily Net Circumference Change",
-      x="Day of Year",y="Net Daily Stem Circumference Change (µm)",
-      color="Legend") + scale_color_manual(
-        values = custom_colors) + guides(
-          color=guide_legend(override.aes = list(
-            alpha = 1, size = 5)))+ geom_vline(
-              xintercept = 177, linetype = "dashed", color = "black")+theme_minimal()+ylim(0,625)+xlim(91,274)
-raw311amp
+daily_stats311$yr <- format(daily_stats311$DATE, "%Y")
+daily_stats311$yr <- as.factor(daily_stats311$yr)
+daily_stats311$DOY <- yday(daily_stats311$DATE)
+
+ggplot(daily_stats311, aes(x = as.POSIXct(DATE), y = amplitude_signed, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "OG DF (ID 311) Daily Circ. Amplitude",
+       x = "Date", y = "Daily Stem Circumference Amplitude (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
+
+
+# 646
+daily_stats646 <- daily.data(df = jump_free_d646, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats646$yr <- format(daily_stats646$DATE, "%Y")
+daily_stats646$yr <- as.factor(daily_stats646$yr)
+daily_stats646$DOY <- yday(daily_stats646$DATE)
+
+ggplot(daily_stats646, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "OG WH (ID 646) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
+
+
+# 648
+daily_stats648 <- daily.data(df = jump_free_d648, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats648$yr <- format(daily_stats648$DATE, "%Y")
+daily_stats648$yr <- as.factor(daily_stats648$yr)
+daily_stats648$DOY <- yday(daily_stats648$DATE)
+
+ggplot(daily_stats648, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +
+  labs(title = "OG WH (ID 648) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal()
+
+
+
+# 651
+daily_stats651 <- daily.data(df = jump_free_d651, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats651$yr <- format(daily_stats651$DATE, "%Y")
+daily_stats651$yr <- as.factor(daily_stats651$yr)
+daily_stats651$DOY <- yday(daily_stats651$DATE)
+
+ggplot(daily_stats651, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  labs(title = "OG WRC (ID 651) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal()
+
+
+
+# 652
+daily_stats652 <- daily.data(df = jump_free_d652, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats652$yr <- format(daily_stats652$DATE, "%Y")
+daily_stats652$yr <- as.factor(daily_stats652$yr)
+daily_stats652$DOY <- yday(daily_stats652$DATE)
+
+ggplot(daily_stats652, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  labs(title = "OG WH (ID 652) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() 
+
+
+
+# 654
+daily_stats654 <- daily.data(df = jump_free_d654, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats654$yr <- format(daily_stats654$DATE, "%Y")
+daily_stats654$yr <- as.factor(daily_stats654$yr)
+daily_stats654$DOY <- yday(daily_stats654$DATE)
+
+ggplot(daily_stats654, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "2° DF (ID 654) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
+
+
+# 655
+daily_stats655 <- daily.data(df = jump_free_d655, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats655$yr <- format(daily_stats655$DATE, "%Y")
+daily_stats655$yr <- as.factor(daily_stats655$yr)
+daily_stats655$DOY <- yday(daily_stats655$DATE)
+
+ggplot(daily_stats655, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "2° DF (ID 655) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
+
+
+
+# 656
+daily_stats656 <- daily.data(df = jump_free_d656, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))
+
+daily_stats656$yr <- format(daily_stats656$DATE, "%Y")
+daily_stats656$yr <- as.factor(daily_stats656$yr)
+daily_stats656$DOY <- yday(daily_stats656$DATE)
+
+ggplot(daily_stats656, aes(x = as.POSIXct(DATE), y = amplitude, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "2° DF (ID 656) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
+
+
+# 860
+daily_stats860 <- daily.data(df = jump_free_d860, TreeNum = 1) |>
+  mutate(Remarks_Description = case_when(
+    Remarks == ""  ~ "Time_max < Time_min",
+    Remarks == "*" ~ "Time_max > Time_min"))|>
+#add column for daily max change
+    mutate(max_diff = Max - lag(Max))
+
+#setting up for DOY annual analysis if desired
+daily_stats860$yr <- format(daily_stats860$DATE, "%Y")
+daily_stats860$yr <- as.factor(daily_stats860$yr)
+daily_stats860$DOY <- yday(daily_stats860$DATE)
+
+daily_stats860<-daily_stats860|>
+#clarifying sign of amplitude so we don't have to plot by Remark
+  mutate(amplitude_signed = case_when(
+    Remarks == "*" ~ amplitude,
+    Remarks == ""  ~ -amplitude))
+
+
+ggplot(daily_stats860,aes(x=amplitude_signed))+geom_histogram()+theme_minimal()+
+  labs(title = "2° DF (ID 860) Histogram of Circ. Amp",
+       x = "Daily Growth Ampltiude", y = NULL)
+
+ggplot(daily_stats860,aes(x=amplitude))+geom_histogram()
+
+#plotting changes in daily max
+ggplot(daily_stats860, aes(x = as.POSIXct(DATE), y = max_diff)) +
+  geom_line() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "2° DF (ID 860) Changes in Daily Max. Circ.",
+       x = "Date", y = "(Max Day N) - (Max Day N-1)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal() +
+  annotate("text", x = as.POSIXct(vline_HD), y = 300, label = "Onset of Heat Dome", color = "black") +   
+  xlim(as.POSIXct("2021-06-11"), as.POSIXct("2021-07-09"))
+
+```
+
+## Daily maximum circumferential change
+
+### 309
+
+```{r}
+#daily_stats860|>MAX DAY 2 MINUS MAX DAY 1
+
+ggplot(daily_stats311, aes(x = as.POSIXct(DATE), y = Max, color = Remarks_Description)) +
+  geom_point() +  
+  geom_vline(xintercept = as.numeric(vline_HD), linetype = "solid", color = "black") +
+  labs(title = "2° DF (ID 311) Daily Circ. Change",
+       x = "Date", y = "Daily Stem Circumference Change (µm)",
+       color = "Time of Max. Circ. Value") + 
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 5))) +
+  theme_minimal()  +
+  annotate("text", x = as.POSIXct(vline_HD), y = -50, label = "Onset of Heat Dome", color = "black")
+
 ```
 
 # Step 3.3: Relative Dry Growth During Climate Adverse events with clim.twd
