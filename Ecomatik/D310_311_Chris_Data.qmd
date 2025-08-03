@@ -29,7 +29,7 @@ save(circ_310_311_rel, file = here("Data/circ_310_311_rel.RData"))
 circ_310_rel <- circ_310_311_rel |> filter(
   ID == "310")
 
-ggplot(
+circ_310plot_rel <- ggplot(
   circ_310_rel, aes(x = DOY, y = circ_rel, color = year)) +
     geom_line(size = 1.25,alpha=0.75) +
     labs(
@@ -46,7 +46,7 @@ ggplot(
 circ_311_rel <- circ_310_311_rel |> filter(
   ID == "311")
 
-ggplot(
+circ_311plot_rel <- ggplot(
   circ_311_rel, aes(x = DOY, y = circ_rel, color = year)) +
     geom_line(size = 1.25,alpha=0.75) +
     labs(
@@ -58,6 +58,9 @@ ggplot(
     geom_vline(xintercept = 178, linetype = "dashed", color = "red") +
     theme_minimal() +
     theme(legend.position = "bottom")
+
+ggsave(filename = here("Plots/circ_310plot_rel.png"),    plot = circ_310plot_rel)
+ggsave(filename = here("Plots/circ_311plot_rel.png"),    plot = circ_311plot_rel)
 ```
 
 The `echo: false` option disables the printing of code (only output is displayed).

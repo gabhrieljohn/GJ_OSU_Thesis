@@ -24,6 +24,7 @@ When you click the **Render** button a document will be generated that includes 
 library(here)
 library(dplyr)
 library(ggplot2)
+library(lubridate)
 # naming year breaks and labels for plotting later
 year_breaks19_24 <- seq(as.POSIXct("2019-01-01"), as.POSIXct("2024-01-01"), by = "year")
 year_labels19_24 <- paste("Jan", format(year_breaks19_24, "%Y"))
@@ -576,130 +577,7 @@ ggsave(here(
 D860plot_circ
 ```
 
-# Circumference to BAI function
-
-From circumference, we need diameter which is then converted to BA using the area of a circle formula:
-
-![{\\displaystyle BA=\\pi \\times (DBH/2)\^{2}}](https://wikimedia.org/api/rest_v1/media/math/render/svg/a6247e795021667351c32ade0f0dc890ef364b3f){alt="{\\displaystyle BA=\\pi \\times (DBH/2)^{2}}"}
-
-If DBH was measured in cm, BA will be in cm^2^. To convert to m^2^, divide by 10,000:
-
-BA(m2)=π×(DBH(cm)/2)210,000
-
-```{r}
-circ_to_bai <- function(df, date_col = NULL, radius_col, circumference_col) {
-  
-  # Check if dplyr is available
-  if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("The 'dplyr' package is required. Please install it using install.packages('dplyr').")
-  }
-  
-  # If date_col is provided, check chronological order
-  if (!is.null(substitute(date_col))) {
-    date_values <- df %>% dplyr::pull({{ date_col }})
-    if (is.unsorted(date_values[!is.na(date_values)])) {
-      warning("Date column is not in chronological order. BAI calculations may be incorrect.")
-    }
-  }
-    
-    result <- df %>%
-      dplyr::mutate(
-        basal_area_mm2 = pi * radius_mm^2,
-        bai_mm2 = c(NA, diff(basal_area_mm2))
-      )
-  
-  return(result)
-}
-```
-
-# BAI to temporal aggregation
-
-```{r}
-hourly_bai_stats <- function(df, date_col, circumference_col, bai_col) {
-  if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("Please install the 'dplyr' package.")
-  }
-  if (!requireNamespace("lubridate", quietly = TRUE)) {
-    stop("Please install the 'lubridate' package.")
-  }
-
-  df_with_bai <- df %>%
-    dplyr::mutate(
-      date = {{ date_col }},
-      circumference_mm = {{ circumference_col }},
-      bai_mm2 = {{ bai_col }}
-    ) %>%
-    dplyr::filter(!is.na(bai_mm2))
-
-  hourly_bai <- df_with_bai %>%
-    dplyr::mutate(
-      date_hour = lubridate::floor_date(date, "hour")
-    ) %>%
-    dplyr::group_by(date_hour) %>%
-    dplyr::summarise(
-      total_hourly_bai_mm2 = sum(bai_mm2, na.rm = TRUE),
-      max_circumference_mm = max(circumference_mm, na.rm = TRUE),
-      min_circumference_mm = min(circumference_mm, na.rm = TRUE),
-      .groups = 'drop'
-    ) %>%
-    dplyr::rename(date = date_hour)
-
-  return(hourly_bai)
-}
-
-#example usage
-#hourly_df <- hourly_bai_stats(df, date, circumference_mm, bai_mm2)
-
-
-
-daily_bai_stats <- function(df, date_col, circumference_col, basal_area_col, bai_col) {
-  if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("Please install the 'dplyr' package.")
-  }
-  if (!requireNamespace("lubridate", quietly = TRUE)) {
-    stop("Please install the 'lubridate' package.")
-  }
-
-  df_with_bai <- df %>%
-    dplyr::mutate(
-      date = {{ date_col }},
-      circumference_mm = {{ circumference_col }},
-      basal_area_mm2 = {{ basal_area_col }},
-      bai_mm2 = {{ bai_col }}
-    ) %>%
-    dplyr::filter(!is.na(bai_mm2))
-
-  daily_bai <- df_with_bai %>%
-    dplyr::mutate(date_day = lubridate::as_date(date)) %>%
-    dplyr::group_by(date_day) %>%
-    dplyr::summarise(
-      total_bai_mm2 = sum(bai_mm2, na.rm = TRUE),
-      max_bai_mm2 = max(bai_mm2, na.rm = TRUE),
-      daily_circ_amplitude_mm = max(
-        circumference_mm, na.rm = TRUE) - min(
-          circumference_mm, na.rm = TRUE),
-      daily_bai_amplitude_mm2 = max(
-        bai_mm2, na.rm = TRUE) - min(bai_mm2, na.rm = TRUE),
-      .groups = 'drop'
-    ) %>%
-    dplyr::arrange(date_day) %>%
-    dplyr::mutate(
-      cumu_bai_mm2 = cumsum(total_bai_mm2),
-      cumu_bai_mm2_norm = cumu_bai_mm2 / max(cumu_bai_mm2, na.rm = TRUE),
-      delta_max_bai_mm2 = c(NA, diff(max_bai_mm2)),
-      DOY = lubridate::yday(date_day),
-      year = as.factor(lubridate::year(date_day))
-    ) %>%
-    dplyr::rename(date = date_day)
-
-  return(daily_bai)
-}
-
-#example usage
-#daily_df  <- daily_bai_stats(df, date, circumference_mm, basal_area_mm2, bai_mm2)
-```
-
-# Doing the conversions and plotting
+# Doing BAI conversions and plotting
 
 ## 310
 
@@ -965,11 +843,17 @@ daily_bai_stats_6dendros$AgeClass <- as.factor(daily_bai_stats_6dendros$AgeClass
 ggplot(daily_bai_stats_6dendros, aes(
   x=date,y=cumu_bai_mm2_norm,color=ID))+geom_line(size=1)+
   geom_vline(xintercept = as.POSIXct("2021-06-27"), linetype = "dashed",color="red")
+
+daily_bai_stats_310_311 <- bind_rows(
+  D310_daily_bai_stats,D311_daily_bai_stats)
+
+save(daily_bai_stats_310_311,file = here(
+  "Data/daily_bai_stats_310_311.RData"))
 ```
 
 # Putting into a model
 
-## Further sorting the combined 6 dendros df  
+## Further sorting the combined 6 dendros df
 
 ```{r}
 library(emmeans)
@@ -1008,7 +892,7 @@ daily_bai_stats_6dendros_truncated <- daily_bai_stats_6dendros_truncated |>
     day_integer = as.numeric(as.Date(date) - min(as.Date(date)) + 1))
 ```
 
-## Making different model options 
+## Making different model options
 
 ```{r}
 model_cumu_bai_norm <- lme(
