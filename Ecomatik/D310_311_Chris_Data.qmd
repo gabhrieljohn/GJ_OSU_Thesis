@@ -1,0 +1,63 @@
+---
+title: "D310_311_Chris_Data"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+library(here)
+library(dplyr)
+library(lubridate)
+```
+
+You can add options to executable code like this
+
+```{r}
+load(here("Data/circ_310_311.RData"))
+
+#reorganizing data so each year starts at 0
+circ_310_311_rel <- circ_310_311 |>
+  arrange(ID, year, DOY) |>
+  group_by(ID, year) |>
+  mutate(circ_rel = circumference_mm - first(circumference_mm)) |>
+  ungroup()
+save(circ_310_311_rel, file = here("Data/circ_310_311_rel.RData"))
+
+#plotting 310
+circ_310_rel <- circ_310_311_rel |> filter(
+  ID == "310")
+
+ggplot(
+  circ_310_rel, aes(x = DOY, y = circ_rel, color = year)) +
+    geom_line(size = 1.25,alpha=0.75) +
+    labs(
+      title = "HJA ID 310 Relative Circumference Change",
+      x = "Day of Year",
+      y = "Relative Circumference Change (mm)",
+      color = "Year"
+    ) +
+    geom_vline(xintercept = 178, linetype = "dashed", color = "red") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+#plotting 311
+circ_311_rel <- circ_310_311_rel |> filter(
+  ID == "311")
+
+ggplot(
+  circ_311_rel, aes(x = DOY, y = circ_rel, color = year)) +
+    geom_line(size = 1.25,alpha=0.75) +
+    labs(
+      title = "HJA ID 311 Relative Circumference Change",
+      x = "Day of Year",
+      y = "Relative Circumference Change (mm)",
+      color = "Year"
+    ) +
+    geom_vline(xintercept = 178, linetype = "dashed", color = "red") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

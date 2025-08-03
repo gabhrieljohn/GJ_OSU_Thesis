@@ -1,0 +1,288 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+library(dplR)
+library(here)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Hydrometeorologic Dryness Index (HDI)
+
+#HDI based on https://nph.onlinelibrary.wiley.com/doi/10.1111/nph.14668
+
+(unit; kPa m−3 H2O m3 soil) 
+
+```{r}
+load(file=here("Dscmet2016_2024.RData")) 
+wood_colors <- c(earlywood = "#1f78b4", latewood = "#33a02c")  
+
+
+#df with just SWC and VPD + flags
+Dscmet_combined_SWC50_VPD56 <- Dscmet2016_2024|>select(c(
+  Date,SOILWC_MEAN_0_50_01,Flag_SOILWC_MEAN_0_50_01,VPD_MEAN_5600_0_01,Flag_VPD_MEAN_5600_0_01))
+#replacing bad VPD flags
+Dscmet_combined_SWC50_VPD56$VPD_MEAN_5600_0_01[Dscmet_combined_SWC50_VPD56$Flag_VPD_MEAN_5600_0_01 %in% c("Q", "V")] <- NA
+#mb to kpa 
+Dscmet_combined_SWC50_VPD56$VPD_kpa<-Dscmet_combined_SWC50_VPD56$VPD_MEAN_5600_0_01/10
+
+#fixing issue of multiple rows fir the same time stamp
+Dscmet_combined_SWC50_VPD56_condensed <- Dscmet_combined_SWC50_VPD56 %>%
+  group_by(Date) %>%
+  summarise(
+    SOILWC_MEAN_0_50_01 = first(na.omit(SOILWC_MEAN_0_50_01)),
+    Flag_SOILWC_MEAN_0_50_01 = first(na.omit(Flag_SOILWC_MEAN_0_50_01)),
+    VPD_MEAN_5600_0_01 = first(na.omit(VPD_MEAN_5600_0_01)),
+    Flag_VPD_MEAN_5600_0_01 = first(na.omit(Flag_VPD_MEAN_5600_0_01)),
+    .groups = "drop"
+  )
+
+#adding HDI column
+Dscmet_combined_SWC50_VPD56_condensed$VPD_kpa <- Dscmet_combined_SWC50_VPD56_condensed$VPD_MEAN_5600_0_01/10
+Dscmet_combined_SWC50_VPD56_condensed <- Dscmet_combined_SWC50_VPD56_condensed|> mutate(
+  HDI = VPD_kpa / SOILWC_MEAN_0_50_01)
+
+
+#condensing time series - starting with adding hour, day, year columns
+Dscmet_combined_SWC50_VPD56_condensed$Date<-as.POSIXct(Dscmet_combined_SWC50_VPD56_condensed$Date,format="%Y-%m-%d %H:%M:%S")
+Dscmet_combined_SWC50_VPD56_condensed$hour <- format(
+  Dscmet_combined_SWC50_VPD56_condensed$Date, "%Y-%m-%d %H:00:00")
+Dscmet_combined_SWC50_VPD56_condensed$day <- format(
+  Dscmet_combined_SWC50_VPD56_condensed$Date, "%Y-%m-%d")
+Dscmet_combined_SWC50_VPD56_condensed$year <- format(
+  Dscmet_combined_SWC50_VPD56_condensed$Date, "%Y")
+#getting daily averages - starting with adding a day column
+
+save(Dscmet_combined_SWC50_VPD56_condensed,file=here("EL RWL/Dscmet_combined_SWC50_VPD56_condensed.RData"))
+
+#hourly mean
+Dscmet_HDI_hourly_mean<- Dscmet_combined_SWC50_VPD56_condensed |> 
+  group_by(hour) |> 
+  summarise(mean_HDI = mean(HDI))
+Dscmet_HDI_hourly_mean$hour <- as.Date(Dscmet_HDI_hourly_mean$hour)
+save(Dscmet_HDI_hourly_mean,file=here("EL RWL/Dscmet_HDI_hourly_mean.RData"))
+#hourly max
+Dscmet_HDI_hourly_max <- Dscmet_combined_SWC50_VPD56_condensed |> 
+  group_by(hour) |> 
+  summarise(max_HDI = max(HDI))
+Dscmet_HDI_hourly_max$hour <- as.Date(Dscmet_HDI_hourly_max$hour)
+save(Dscmet_HDI_hourly_max,file=here("EL RWL/Dscmet_HDI_hourly_max.RData"))
+
+#plot HD +/- 1 week
+ggplot(Dscmet_SWC50_VPD56_hourly, aes(x = hour, y = mean_HDI)) +
+    geom_point()+
+  scale_x_date(
+    limits = as.Date(c("2021-06-21", "2021-07-06")),
+    date_breaks = "2 days",
+    date_labels = "%b %d"
+  ) +
+  labs(x = "Date", y = "Mean Hourly Hydrometeorologic Dryness Index") +
+  theme_minimal()
+
+#daily mean
+Dscmet_HDI_daily_mean<- Dscmet_combined_SWC50_VPD56_condensed |> 
+  group_by(day) |> 
+  summarise(mean_HDI = mean(HDI))
+Dscmet_HDI_daily_mean$day <- as.Date(Dscmet_HDI_daily_mean$day)
+save(Dscmet_HDI_daily_mean,file=here("EL RWL/Dscmet_HDI_daily_mean.RData"))
+#daily max
+Dscmet_HDI_daily_max <- Dscmet_combined_SWC50_VPD56_condensed |> 
+  group_by(day) |> 
+  summarise(max_HDI = max(HDI))
+Dscmet_HDI_daily_max$day <- as.Date(Dscmet_HDI_daily_max$day)
+save(Dscmet_HDI_daily_max,file=here("EL RWL/Dscmet_HDI_daily_max.RData"))
+
+#plot HD +/- 4 weeks
+ggplot(Dscmet_SWC50_VPD56_daily, aes(x = day, y = max_HDI)) +
+    geom_point()+
+  scale_x_date(
+    limits = as.Date(c("2021-05-30", "2021-07-26")),
+    date_breaks = "5 days",
+    date_labels = "%b %d") +
+  labs(x = "Date", y = "Max Daily Hydrometeorologic Dryness Index") +
+  theme_minimal()
+
+#max yearly
+Dscmet_SWC50_VPD56_yearly <- Dscmet_combined_SWC50_VPD56_condensed |> 
+  group_by(year) |> 
+  summarise(max_HDI = max(HDI,na.rm = TRUE))
+Dscmet_SWC50_VPD56_yearly$year <- as.double(Dscmet_SWC50_VPD56_yearly$year)
+#plot
+ggplot(Dscmet_SWC50_VPD56_yearly, aes(x = year, y = max_HDI)) +
+    geom_line() +
+  labs(x = "Date", y = "Max Annual Hydrometeorologic Dryness Index") +
+  theme_minimal()
+```
+
+```{r}
+#naming object to list all RWL files in EL RWL
+rwl_files <- list.files(here("EL RWL"), pattern = "\\.rwl$", full.names = TRUE)
+#reading and storing each file from above 
+batch_read_rwl <- function(file_path) {
+  df <- read.rwl(file_path)
+  
+  # Convert rownames to a year column BEFORE pivot
+  df$year <- as.integer(rownames(df))
+  
+  df_long <- df %>%
+    pivot_longer(-year, names_to = "sample_id", values_to = "ring_width") %>%
+   mutate(
+tree_id = str_replace(sample_id, "([AB])_([EL])$", ""),
+  wood_type = case_when(
+    str_ends(sample_id, "_E") ~ "earlywood",
+    str_ends(sample_id, "_L") ~ "latewood",
+    TRUE ~ NA_character_
+  ),
+  wood_type = factor(wood_type, levels = c("earlywood", "latewood"))
+)
+  return(df_long)
+}
+
+
+# Apply to all files and bind into one data frame
+combined_rwl <- bind_rows(lapply(rwl_files, batch_read_rwl))
+# Average A and B cores
+combined_rwl_mean <- combined_rwl |>
+  group_by(year, tree_id, wood_type) |>
+  summarise(ring_width = mean(ring_width, na.rm = TRUE), .groups = "drop")
+
+write.csv(combined_rwl_mean, here("EL RWL/mean_combined_ring_widths.csv"))
+
+# wide version of raw data
+combined_rwl_mean_wide <- combined_rwl_mean|>
+  pivot_wider(names_from = tree_id, values_from = ring_width)
+write.csv(combined_rwl_mean_wide, here("EL RWL/combined_rwl_mean_wide.csv"))
+
+#wide version of normalized data by shifting everything to 0->1 for each wood type and tree in the long format
+normalized_mean_wide <- combined_rwl_mean %>%
+  group_by(tree_id,wood_type) %>%
+  mutate(
+    ring_width_norm = (ring_width - min(ring_width, na.rm = TRUE)) /
+                      (max(ring_width, na.rm = TRUE) - min(ring_width, na.rm = TRUE))
+  ) %>%
+  ungroup() %>%
+  select(year, tree_id, wood_type, ring_width_norm) %>%
+  pivot_wider(names_from = tree_id, values_from = ring_width_norm)
+
+write.csv(normalized_mean_wide, here("EL RWL/normalized_mean_combined_ring_widths_wide.csv"))
+```
+
+```{r}
+normalized_mean_wide_no652B2 <- normalized_mean_wide |>select(!(c(`648_B2E`,`648_B2L`)))
+combined_rwl_mean_wide_no652B2 <-combined_rwl_mean_wide |> select(!(c(`648_B2E`,`648_B2L`)))
+
+plot_tree_raw <- function(tree_col, data_wide) {
+  # Subset and rename
+  df <- data_wide %>%
+    select(year, wood_type, all_of(tree_col)) %>%
+    rename(ring_width = all_of(tree_col)) %>%
+    filter(!is.na(ring_width))
+
+  # Skip trees with no data
+  if (nrow(df) == 0) {
+    message(paste("Skipping", tree_col, "- no valid data"))
+    return(NULL)
+  }
+
+  # Safe range for x and y
+  first_year <- min(df$year, na.rm = TRUE)
+  last_year  <- max(df$year, na.rm = TRUE)
+  y_min <- min(df$ring_width, na.rm = TRUE)
+  y_max <- max(df$ring_width, na.rm = TRUE)
+
+  # Identify min/max years by wood type
+  minmax_years <- df %>%
+    group_by(wood_type) %>%
+    filter(ring_width == min(ring_width, na.rm = TRUE) | 
+           ring_width == max(ring_width, na.rm = TRUE)) %>%
+    ungroup()
+
+  # Build the plot
+  ggplot(df, aes(x = year, y = ring_width, color = wood_type)) +
+    geom_line(size = 1) +
+    # Heat dome year
+    geom_vline(xintercept = 2021, linetype = "dashed", color = "red") +
+    # Min/max vertical lines
+    geom_vline(data = minmax_years, aes(xintercept = year, color = wood_type),
+               linetype = "dashed", show.legend = FALSE) +
+    scale_color_manual(values = wood_colors, na.translate = FALSE) +
+    scale_x_continuous(
+      limits = c(first_year, last_year),
+      breaks = seq(first_year, last_year, by = 3)
+    ) +
+    scale_y_continuous(limits = c(y_min, y_max)) +
+    labs(
+      title = paste("Seasonwood Ring Widths: Tree ID", tree_col),
+      x = "Year",
+      y = "Ring Width (mm)",
+      color = "Wood Type"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+}
+ 
+tree_cols <- colnames(combined_rwl_mean_wide_no652B2)[!(colnames(combined_rwl_mean_wide_no652B2) %in% c("year", "wood_type"))]
+
+for (tree in tree_cols) {
+  tree_title <- str_remove(tree, "_$")
+
+  # Generate the plot
+p <- plot_tree_raw(tree, combined_rwl_mean_wide_no652B2) +
+    labs(title = paste("Raw Seasonwood Ring Widths: Tree ID", tree_title))
+
+# Skip if plot is NULL
+if (!is.null(p)) {
+print(p)
+
+    # Save plot to file (with underscore in filename)
+    ggsave(
+      filename = here("Plots", paste0("ringwidth_plot_", tree, ".png")),
+      plot = p)
+  }
+}
+
+```
+
+```{r}
+# Compute E/L ratio
+combined_rwl_mean_ratio <- combined_rwl_mean %>%
+  pivot_wider(names_from = wood_type, values_from = ring_width) %>%
+  mutate(ratio_EL = earlywood / latewood)
+
+# Unique tree IDs
+tree_ids <- unique(combined_rwl_mean_ratio$tree_id)
+
+# Loop through tree IDs and plot individually
+for (tree in tree_ids) {
+  df_tree <- combined_rwl_mean_ratio %>%
+    filter(tree_id == tree)
+
+  p <- ggplot(df_tree, aes(x = year, y = ratio_EL)) +
+    geom_line(color = "steelblue", size = 1) +
+    geom_vline(xintercept = 2021, linetype = "dashed", color = "red") +
+    labs(
+      title = paste("Earlywood/Latewood Ratio Over Time - Tree", gsub("_", "", tree)),
+      x = "Year",
+      y = "E:L Ratio"
+    ) +
+    theme_minimal()
+
+  # Save the plot
+#  ggsave(
+#    filename = paste0("Plots/EL_ratio_", tree, ".png"),
+#    plot = p,
+#    width = 8, height = 4, dpi = 300  )
+
+  print(p)  # Optional: view in RStudio
+}
+```

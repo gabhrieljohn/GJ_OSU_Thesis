@@ -1,0 +1,415 @@
+---
+title: "Behind the scenes code that only needs to be read once"
+author: "Gabby John"
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load(file=here("Climate/Primet2014_2024.RData"))
+load(file=here("Climate/Dscmet2016_2024.RData"))
+dendrometers <- dscmet_422_all |> select(Date,DEND309_AVG_4200_0_01,Flag_DEND309_AVG_4200_0_01,)
+```
+
+#From extracting and processing VPD and AT from DSCMET
+##First: load
+load(file=here("Climate/Dscmet2016_2024.RData"))
+
+#Second: check for bad flags (only need to do once) - TAKES FOREVER
+unique_dscmet_strings <- unique( 
+unlist(   
+sapply(     
+Dscmet2016_2024, function(x) x[is.character(x)])))
+unique_primet_strings <- unique(  unlist(    sapply(      Primet2016_2024, function(x) x[is.character(x)])))
+values_to_remove_P230rain <- c("Q", "QQ")
+# Filter data frame to swap back values with NA#extracting VPD and getting bad flag strings 
+Dscmet_VPD52m <- Dscmet2016_2024|>select(c(Date,VPD_MEAN_5600_0_01,Flag_VPD_MEAN_5600_0_01))
+Dscmet_VPD52m$Date<-as.POSIXct(Dscmet_VPD52m$Date,format="%Y-%m-%d %H:%M:%S")unique_dscmet_VPD52m_strings <- unique( unlist(    sapply(      Dscmet_VPD52m, function(x) x[is.character(x)])))
+Dscmet_VPD52m$Flag_VPD_MEAN_5600_0_01[Dscmet_VPD52m$Flag_VPD_MEAN_5600_0_01=="Q"] <- NA
+
+##mb to kpa 
+Dscmet_VPD52m$VPD_kpa<-Dscmet_VPD52m$VPD_MEAN_5600_0_01/10
+save(Dscmet_VPD52m,file = here("Climate/filtered_Dscmet_VPD52m.RData"))
+
+##same with air temp
+Dscmet_AT52m <- Dscmet2016_2024|>select(c(Date,AIRTEMP_MEAN_5600_0_01,Flag_AIRTEMP_MEAN_5600_0_01,AIRTEMP_MAX_5600_0_01,Flag_AIRTEMP_MAX_5600_0_01))Dscmet_AT52m$Date<-as.POSIXct(Dscmet_AT52m$Date,format="%Y-%m-%d %H:%M:%S")unique_dscmet_AT52m_strings <- unique(  unlist(    sapply(      Dscmet_AT52m, function(x) x[is.character(x)])))
+Dscmet_AT52m[Dscmet_AT52m %in% c("MI", "Q")] <- NA
+save(Dscmet_AT52m,file = here("Climate/filtered_Dscmet_AT52m.RData"))
+
+##adding hour and day columns
+##VPD
+Dscmet_VPD52m$hour <- format(
+  Dscmet_VPD52m$Date, "%Y-%m-%d %H:00:00")
+Dscmet_VPD52m$Date<-as.POSIXct(
+  Dscmet_VPD52m$hour,format="%Y-%m-%d %H")
+
+Dscmet_VPD52m$day <- format(
+  Dscmet_VPD52m$Date, "%Y-%m-%d")
+Dscmet_VPD52m$day<-as.POSIXct(
+  Dscmet_VPD52m$day,format="%Y-%m-%d")
+
+##AT
+Dscmet_AT52m$hour <- format(
+  Dscmet_AT52m$Date, "%Y-%m-%d %H:00:00")
+Dscmet_AT52m$Date<-as.POSIXct(
+  Dscmet_AT52m$hour,format="%Y-%m-%d %H")
+
+Dscmet_AT52m$day <- format(
+  Dscmet_AT52m$Date, "%Y-%m-%d")
+Dscmet_AT52m$day<-as.POSIXct(
+  Dscmet_AT52m$day,format="%Y-%m-%d")
+
+##hourly VPD means
+filtered_Dscmet_VPD52m_hourly <- Dscmet_VPD52m |> 
+  group_by(hour) |> 
+  summarise(VPD52m_kpa_hourly = mean(VPD_kpa,na.rm=TRUE))|>
+  filter(!is.nan(VPD52m_kpa_hourly))
+##daily VPD means 
+filtered_Dscmet_VPD52m_daily <- Dscmet_VPD52m |> 
+  group_by(day) |> 
+  summarise(VPD52m_kpa_daily = mean(VPD_kpa,na.rm=TRUE))|>
+  filter(!is.nan(VPD52m_kpa_daily))
+
+##hourly max VPD mean
+filtered_Dscmet_maxVPD52m_hourly <- Dscmet_VPD52m |> 
+  group_by(hour) |> 
+  summarise(maxVPD52m_kpa_hourly = max(VPD_kpa,na.rm=TRUE))|>
+  filter(!is.nan(maxVPD52m_kpa_hourly))
+##daily VPD max 
+filtered_Dscmet_maxVPD52m_daily <- Dscmet_VPD52m |> 
+  group_by(day) |> 
+  summarise(maxVPD52m_kpa_daily = max(VPD_kpa,na.rm=TRUE))|>
+  filter(!is.nan(maxVPD52m_kpa_daily))
+
+##hourly and daily AT means 
+filtered_Dscmet_AT52m_hourly <- Dscmet_AT52m |> 
+  group_by(hour) |> 
+  summarise(AT52m_mean_hourly = mean(AIRTEMP_MEAN_5600_0_01,na.rm=TRUE))|>
+  filter(!is.nan(AT52m_mean_hourly))
+##daily values 
+filtered_Dscmet_AT52m_daily <- Dscmet_AT52m |> 
+  group_by(day) |> 
+  summarise(AT52m_mean_daily = mean(AIRTEMP_MEAN_5600_0_01,na.rm=TRUE))|>
+  filter(!is.nan(AT52m_mean_daily))
+
+##hourly and daily AT max 
+filtered_Dscmet_maxAT52m_hourly <- Dscmet_AT52m |> 
+  group_by(hour) |> 
+  summarise(AT52m_max_hourly = max(AIRTEMP_MAX_5600_0_01,na.rm=TRUE))|>
+  filter(!is.nan(AT52m_max_hourly))
+##daily values 
+filtered_Dscmet_maxAT52m_daily <- Dscmet_AT52m |> 
+  group_by(day) |> 
+  summarise(AT52m_max_daily = max(AIRTEMP_MAX_5600_0_01,na.rm=TRUE))|>
+  filter(!is.nan(AT52m_max_daily))
+
+##saving all of these
+##means
+save(filtered_Dscmet_VPD52m_hourly,file = here(
+  "Climate/filtered_Dscmet_VPD52m_hourly.RData"))
+save(filtered_Dscmet_VPD52m_daily,file = here(
+  "Climate/filtered_Dscmet_VPD52m_daily.RData"))
+save(filtered_Dscmet_AT52m_hourly,file = here(
+  "Climate/filtered_Dscmet_AT52m_hourly.RData"))
+save(filtered_Dscmet_AT52m_daily,file = here(
+  "Climate/filtered_Dscmet_AT52m_daily.RData"))
+##maxes
+save(filtered_Dscmet_maxVPD52m_hourly,file = here(
+  "Climate/filtered_Dscmet_maxVPD52m_hourly.RData"))
+save(filtered_Dscmet_maxVPD52m_daily,file = here(
+  "Climate/filtered_Dscmet_maxVPD52m_daily.RData"))
+save(filtered_Dscmet_maxAT52m_hourly,file = here(
+  "Climate/filtered_Dscmet_maxAT52m_hourly.RData"))
+save(filtered_Dscmet_maxAT52m_daily,file = here(
+  "Climate/filtered_Dscmet_maxAT52m_daily.RData"))
+
+
+
+
+#From FES524 Final Project
+data_prep524<-bind_rows(dscmet_422_all,P230_df)
+data_prep_422_230<-data_prep524|>select(c(
+  Site,
+  Date,
+  DEND309_AVG_4200_0_01,Flag_DEND309_AVG_4200_0_01,
+  DEND310_AVG_150_0_01,Flag_DEND310_AVG_150_0_01,
+  DEND311_AVG_150_0_01,Flag_DEND311_AVG_150_0_01,
+  DEND646_AVG_150_0_01,Flag_DEND646_AVG_150_0_01,
+  DEND648_AVG_150_0_01,Flag_DEND648_AVG_150_0_01,
+  DEND652_AVG_150_0_01,Flag_DEND652_AVG_150_0_01,
+  Date,
+  yr,
+  DOY,
+  SOILTEMP_MEAN_0_10_01,Flag_SOILTEMP_MEAN_0_10_01,
+  SOILTEMP_MEAN_0_20_02,Flag_SOILTEMP_MEAN_0_20_02,
+  SOILTEMP_MEAN_0_50_03,Flag_SOILTEMP_MEAN_0_50_03,
+  SOILTEMP_MEAN_0_100_04,Flag_SOILTEMP_MEAN_0_100_04, 
+  SWC_MEAN_0_10_01,Flag_SWC_MEAN_0_10_01,
+  SWC_MEAN_0_20_02,Flag_SWC_MEAN_0_20_02,
+  SWC_MEAN_0_50_03,Flag_SWC_MEAN_0_50_03,
+  SWC_MEAN_0_100_04,Flag_SWC_MEAN_0_100_04,
+  PRECIP_TOT_100_0_01,Flag_PRECIP_TOT_100_0_01,
+  PRECIP_ACC_100_0_01,Flag_PRECIP_ACC_100_0_01
+  ))
+save(data_prep_422_230,file = "data_prep_422_230.RData") #have to run this in the console for it to save to the directory 
+load("Data/data_prep_422_230.RData")
+#more data prep: raw to filtered and processed
+#getting hourly averages - starting with adding an hour column
+data_prep_422_230 <- data_prep_422_230 |>
+  mutate(hour = floor_date(Date, unit = "hour"))
+data_prep_422_230$year <- format(data_prep_422_230$hour, "%Y")
+data_prep_422_230$year<-as.factor(data_prep_422_230$year)
+data_prep_422_230<-data_prep_422_230|>
+  filter(year!="2018")|>
+  mutate(
+    DEND860_AVG_150_0_01_NoNeg = ifelse(DEND860_AVG_150_0_01 < 0, NA,
+                                        DEND860_AVG_150_0_01))
+data_prep_6dendros_hourly<-data_prep_422_230|>select(c(
+  Date,
+  hour,
+  year,
+  DEND310_AVG_150_0_01,
+  DEND311_AVG_150_0_01,
+  DEND654_AVG_150_0_01,
+  DEND655_AVG_150_0_01,
+  DEND656_AVG_150_0_01,
+  DEND860_AVG_150_0_01_NoNeg,
+))
+save(data_prep_6dendros_hourly,file = "data_prep_6dendros_hourly.RData")
+
+
+```{r}
+load("Data/data_prep_6dendros_hourly.RData")
+data_prep_6dendros_hourly$day <- format(
+  data_prep_6dendros_hourly$Date, "%Y-%m-%d")
+data_prep_6dendros_hourly$day<-as.POSIXct(data_prep_6dendros_hourly$day,format="%Y-%m-%d")
+
+
+#daily values 
+#310 - OG DF
+d310_daily <- data_prep_6dendros_hourly |> 
+  group_by(day) |> 
+  summarise(value = mean(DEND310_AVG_150_0_01,na.rm=TRUE))|>
+  filter(!is.nan(value))  
+
+# 311 - OG DF
+d311_daily <- data_prep_6dendros_hourly |> 
+  group_by(day) |> 
+  summarise(value = mean(DEND311_AVG_150_0_01, na.rm = TRUE)) |> 
+  filter(!is.nan(value))
+
+# 654 - Secondary DF
+d654_daily <- data_prep_6dendros_hourly |> 
+  group_by(day) |> 
+  summarise(value = mean(DEND654_AVG_150_0_01, na.rm = TRUE)) |> 
+  filter(!is.nan(value))
+
+# 655 - Secondary DF
+d655_daily <- data_prep_6dendros_hourly |> 
+  group_by(day) |> 
+  summarise(value = mean(DEND655_AVG_150_0_01, na.rm = TRUE)) |> 
+  filter(!is.nan(value))
+
+# 656 - Secondary DF
+d656_daily <- data_prep_6dendros_hourly |> 
+  group_by(day) |> 
+  summarise(value = mean(DEND656_AVG_150_0_01, na.rm = TRUE)) |> 
+  filter(!is.nan(value))
+
+# 860 - Secondary DF - note only ~15% of original canopy remains alive after 2024
+d860_daily <- data_prep_6dendros_hourly |> 
+  group_by(day) |> 
+  summarise(value = mean(DEND860_AVG_150_0_01_NoNeg, na.rm = TRUE)) |> 
+  filter(!is.nan(value))
+
+
+#Correcting jumps
+jump_free_d310<-jump.locator(df=d310_daily,v=200)
+jump_free_d310$ID<-as.factor("310")
+jump_free_d310$AgeClass<-as.factor("OG")
+#differencing
+jump_free_d310 <- jump_free_d310 |> arrange(TIME)|> mutate(
+    value_diff = value - lag(value))
+
+jump_free_d311<-jump.locator(df=d311_daily,v=200)
+jump_free_d311$ID<-as.factor("311")
+jump_free_d311$AgeClass<-as.factor("OG")
+#differencing
+jump_free_d311 <- jump_free_d311 |> arrange(TIME)|> mutate(
+    value_diff = value - lag(value))
+
+jump_free_d654<-jump.locator(df=d654_daily,v=200)
+jump_free_d654$ID<-as.factor("654")
+jump_free_d654$AgeClass<-as.factor("Secondary")
+#differencing
+jump_free_d654 <- jump_free_d654 |> arrange(TIME)|> mutate(
+    value_diff = value - lag(value))
+
+jump_free_d655<-jump.locator(df=d655_daily,v=200)
+jump_free_d655$ID<-as.factor("655")
+jump_free_d655$AgeClass<-as.factor("Secondary")
+#differencing
+jump_free_d655 <- jump_free_d655 |> arrange(TIME)|> mutate(
+    value_diff = value - lag(value))
+
+jump_free_d656<-jump.locator(df=d656_daily,v=200)
+jump_free_d656$ID<-as.factor("656")
+jump_free_d656$AgeClass<-as.factor("Secondary")
+#differencing
+jump_free_d656 <- jump_free_d656 |> arrange(TIME)|> mutate(
+    value_diff = value - lag(value))
+
+jump_free_d860<-jump.locator(df=d860_daily,v=200)
+jump_free_d860$ID<-as.factor("860")
+jump_free_d860$AgeClass<-as.factor("Secondary")
+#differencing
+jump_free_d860 <- jump_free_d860 |> arrange(TIME)|> mutate(
+    value_diff = value - lag(value))
+
+
+data_prep_6dendros_daily_jf<-bind_rows(
+  jump_free_d310,
+  jump_free_d311,
+  jump_free_d654,
+  jump_free_d655,
+  jump_free_d656,
+  jump_free_d860)
+```
+
+	
+
+AT52m_max_daily
+2021-06-28
+44.63
+2021-06-27
+42.67
+2017-08-02
+40.68
+2020-08-15
+40.11
+2022-07-30
+39.96
+2022-07-29
+39.73
+2017-06-25
+39.58
+2017-08-03
+39.13
+2021-08-11
+39.00
+2024-07-08
+38.96
+2024-07-05
+38.72
+2024-09-05
+38.59
+2021-06-26
+38.55
+
+#Try #2 for making a model
+DOY 178 = june 27
+DOY 179 = june 28
+DOY 178-28 = 150 = May 30
+DOY 179+28 = 207 = July 26
+```{r}
+load(file=here("DendroAnalyst/daily_stats_6dendros.RData"))
+#making m-d column
+daily_stats_6dendros$day <- format(daily_stats_6dendros$DATE,format = "%m-%d")
+
+#truncating df to be HD +/- 4 weeks
+daily_stats_6dendros_truncated <- daily_stats_6dendros |>
+  filter(
+    (month(DATE) == 5 & day(DATE) >= 30) |
+    (month(DATE) == 6) |
+    (month(DATE) == 7 & day(DATE) <= 26))
+
+#adding period column
+daily_stats_6dendros_truncated <- daily_stats_6dendros_truncated |>
+  mutate(
+    period = case_when(
+      (month(DATE) == 5 & day(DATE) >= 30) |
+      (month(DATE) == 6 & day(DATE) < 27) ~ "before",
+      (month(DATE) == 6 & day(DATE) %in% c(27, 28)) ~ "during",
+      (month(DATE) == 6 & day(DATE) > 28) |
+      (month(DATE) > 6) ~ "after",
+      TRUE ~ NA_character_))
+
+# Ensuring Period is chronologically ordered 
+daily_stats_6dendros_truncated$period <- factor(daily_stats_6dendros_truncated$period, levels = c("before", "during", "after"))
+
+#Days are repeating so let's do Julian days instead of DOY days
+daily_stats_6dendros_truncated <- daily_stats_6dendros_truncated |>
+  arrange(DATE) |>
+  mutate(
+    day_integer = as.numeric(as.Date(DATE) - min(as.Date(DATE)) + 1))
+
+
+#updated model: july
+library(emmeans)
+library(nlme)
+
+model1 <- lme(
+  amplitude ~ yr*period + AgeClass,
+  data = daily_stats_6dendros_truncated,
+  random = ~ 1 | yr/ID, #changed from 1 | ID or else wouldn't run
+  correlation = corARMA(p=1,form = ~ day_integer | yr/ID)) #/ not : to avoid incompatible formula
+#is p=1 correct?
+
+model2 <- lme(
+  amplitude_signed ~ yr*period + AgeClass,
+  data = daily_stats_6dendros_truncated,
+  random = ~ 1 | yr/ID, #changed from 1 | ID or else wouldn't run
+  correlation = corARMA(p=1,form = ~ day_integer | yr/ID)) #/ not : to avoid incompatible formula
+#is p=1 correct?
+
+model3 <- lme(
+  amplitude_signed ~ yr*period + AgeClass,
+  data = daily_stats_6dendros_truncated,
+  random = list(~ 1 | ID), #changed from 1 | ID or else wouldn't run
+  correlation = corARMA(p=1,form = ~ day_integer | ID)) #/ not : to avoid incompatible formula
+
+
+
+summary(model1)
+summary(model2)
+summary(model3)
+
+# Diagnostic plots - amp
+qqnorm(model1, ~ resid(., type = "p")) #test for normality
+acf(residuals(model1)) # checks correlation structure
+plot(model1, which = 1)  #test for equal variance
+hist(residuals(model1, type = "pearson"))
+
+# Diagnostic plots - amp_signed
+qqnorm(model2, ~ resid(., type = "p")) #test for normality
+acf(residuals(model2)) # checks correlation structure
+plot(model2, which = 1)  #test for equal variance
+hist(residuals(model1, type = "pearson"))
+
+# Diagnostic plots - amp_signed
+qqnorm(model3, ~ resid(., type = "normalized")) #test for normality
+acf(residuals(model3)) # checks correlation structure
+plot(model3, which = 1)  #test for equal variance
+hist(residuals(model3, type = "normalized"))
+
+```
+
+
+data_prep_6dendros_daily_jf$Year <- as.factor(data_prep_6dendros_daily_jf$year)
+
+data_6dendros_growing_season <- data_prep_6dendros_daily_jf |>
+  filter(month(TIME) >= 4 & month(TIME) <=9)
+data_6dendros_growing_season
+
+data_6dendros_growing_season <- data_6dendros_growing_season |>
+  filter(!is.na(value_diff),
+         !is.na(Day),
+         !is.na(Year),
+         !is.na(Period),
+         !is.na(AgeClass),
+         !is.na(ID))
+data_6dendros_growing_season<-data_6dendros_growing_season|>select(c(TIME,ID,AgeClass,Period,Year,Day,value_diff))
+
+save(data_6dendros_growing_season,file = "Data/data_6dendros_growing_season.RData")
+load("Data/data_6dendros_growing_season.RData")
+```
