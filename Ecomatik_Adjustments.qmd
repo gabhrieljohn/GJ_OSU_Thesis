@@ -1255,8 +1255,6 @@ summary(model_total_daily_bai)
 # 18: year2023:periodafter
 # 19: year2024:periodafter  
 
-# The model predicts the expected value for each year-period combination.
-
 # Contrast vectors for "after vs before" in each year
 
 # 2019 after - before: only needs one coefficient assignemnt (after period) since everything else is already included in ther reference level 
@@ -1284,7 +1282,7 @@ C_2024_after_vs_before = c(
   0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
 
 
-# Pre-heatwave (2019-2020) vs Post-heatwave (2022-2024)
+# Averages so we can calculate Pre-heatwave (2019-2020) vs Post-heatwave (2022-2024)
 C_2019_2020_A_v_B <- (
   C_2019_after_vs_before + C_2020_after_vs_before)/2
 
@@ -1294,28 +1292,6 @@ C_2019_2021_A_v_B <- (
 C_2022_2024_A_v_B <- (
   C_2022_after_vs_before + C_2024_after_vs_before)/3
 
-
-
-
-
-
-
-# Average(2019, 2020) = 
-# 0.5 × [position 8] + 0.5 × [position 8 + position 15]
-# Same as 1.0 × position 8 + 0.5 × position 15
-
-# Average(2022, 2023, 2024) = 
-# (1/3) × [position 8 + position 17] + 
-# (1/3) × [position 8 + position 18] + 
-# (1/3) × [position 8 + position 19]
-# Same as  1.0 × position 8 + (1/3) × position 17 + (1/3) × position 18 + (1/3) × position 19
-
-# Average(2019,2020) - Average(2022,2023,2024) = 
-# 1-1 X position 8 + 0.5 X position 15 - 1/3 X position 17 - 1/3 X position 18 - 1/3 X position 19 
-
-C_19A_20A_vs_22A_24A = c(
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0, -1/3, -1/3, -1/3)
-# the above sum is -0.5
 
 
 
@@ -1341,13 +1317,4 @@ C_2023_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0)
 
 # 2024 vs 2021:
 C_2024_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1)
-
-
-
-# Interpretation
-print("INTERPRETATION:")
-print("C_pre_vs_post: Tests if average after-before difference in 2019-2020 differs from 2022-2024")
-print("C_XXXX_vs_2021: Tests if each year's after-before difference differs from 2021's")
-print("Positive result = first group has larger after-before difference")
-print("Negative result = second group has larger after-before difference")
 ```
