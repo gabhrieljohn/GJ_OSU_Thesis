@@ -32,7 +32,7 @@ year_labels19_24 <- paste("Jan", format(year_breaks19_24, "%Y"))
 
 little difference between mean and median reductions in data
 
-309
+# 309
 
 ```{r}
 D309_annotated <- read_csv(here("Data/D309_annotated.csv"))
@@ -93,7 +93,96 @@ ggplot(D309_adjusted_circ3,aes(date,circumference_mm))+geom_point(alpha=0.7)
 # 309
 
 ```{r}
-ff
+#loading raw adjusted data from Excel
+D309_manual_flags <- read.csv(here("Data/D309_manual_flags.csv"))
+D309_manual_flags$Date<-as.POSIXct(D309_manual_flags$Date,format="%Y-%m-%d %H:%M:%S")
+D309_manual_flags$DEND309_AVG_4200_0_01[D309_manual_flags$DEND309_AVG_4200_0_01 == ""] <- NA
+
+
+#plotting raw data
+D309plot_raw <- ggplot(D309_manual_flags,aes(Date,DEND309_AVG_4200_0_01))+geom_point(alpha=0.7)+
+  labs(title = "OG DF (ID 309) Raw Dendrometer Value",
+    x = "Date",
+    y = "Upper Canopy Dendrometer Value (µm)")+
+scale_x_datetime(
+    limits = as.POSIXct(c("2019-01-01", "2024-10-01")),
+    breaks = year_breaks19_24,
+    labels = year_labels19_24
+  )+theme_minimal()
+
+#converting each raw data segment to circumference based on manual flag
+D309_raw_A <- D309_manual_flags |> filter(Manual_flag=="A")
+D309_circ_A <- dc3_to_circumference(
+  df = D309_raw_A,
+  date_column = D309_raw_A$Date, 
+  Vi_micrometers =D309_raw_A$DEND309_AVG_4200_0_01, 
+  C0= 1586 , V0 = 2.353, na_method = "skip")
+
+D309_raw_B <- D309_manual_flags |> filter(Manual_flag=="B")
+D309_circ_B <- dc3_to_circumference(
+  df = D309_raw_B,
+  date_column = D309_raw_B$Date, 
+  Vi_micrometers =D309_raw_B$DEND309_AVG_4200_0_01, 
+  C0= 1603.902 , V0 = 24.995, na_method = "skip")
+
+D309_raw_C <- D309_manual_flags |> filter(Manual_flag=="C")
+D309_circ_C <- dc3_to_circumference(
+  df = D309_raw_C,
+  date_column = D309_raw_C$Date, 
+  Vi_micrometers =D309_raw_C$DEND309_AVG_4200_0_01, 
+  C0= 1584.330 , V0 = -0.218, na_method = "skip")
+
+D309_raw_D <- D309_manual_flags |> filter(Manual_flag=="D")
+D309_circ_D <- dc3_to_circumference(
+  df = D309_raw_D,
+  date_column = D309_raw_D$Date, 
+  Vi_micrometers =D309_raw_D$DEND309_AVG_4200_0_01, 
+  C0= 1584.667 , V0 = 10.489, na_method = "skip")
+
+D309_raw_E <- D309_manual_flags |> filter(Manual_flag=="E")
+D309_circ_E <- dc3_to_circumference(
+  df = D309_raw_E,
+  date_column = D309_raw_E$Date, 
+  Vi_micrometers = D309_raw_E$DEND309_AVG_4200_0_01, 
+  C0= 1592.774 , V0 = -1.345, na_method = "skip")
+
+D309_raw_F <- D309_manual_flags |> filter(Manual_flag=="F")
+D309_circ_F <- dc3_to_circumference(
+  df = D309_raw_F,
+  date_column = D309_raw_F$Date, 
+  Vi_micrometers = D309_raw_F$DEND309_AVG_4200_0_01, 
+  C0= 1595.282 , V0 = 15.942, na_method = "skip")
+
+D309_raw_G <- D309_manual_flags |> filter(Manual_flag=="G")
+D309_circ_G <- dc3_to_circumference(
+  df = D309_raw_G,
+  date_column = D309_raw_G$Date, 
+  Vi_micrometers = D309_raw_G$DEND309_AVG_4200_0_01, 
+  C0= 1595.091 , V0 = 8.685, na_method = "skip")
+
+#combining all of these into one df
+D309_circ_A_G <- bind_rows(D309_circ_A,D309_circ_B,D309_circ_C,
+                           D309_circ_D,D309_circ_E,D309_circ_F,
+                           D309_circ_G)
+D309_circ_A_G <- D309_circ_A_G |>
+  mutate(difference = circumference_mm - lag(circumference_mm))
+
+#plotting & saving circumference 
+D309plot_circ <- ggplot(D309_circ_A_G,aes(date,circumference_mm))+geom_point(alpha=0.7)+
+  labs(title = "OG DF (ID 309) Stem Circumference",
+    x = "Date",
+    y = "Upper Canopy Stem Circumference (mm)") +
+scale_x_datetime(
+    limits = as.POSIXct(c("2019-01-01", "2024-10-01")),
+    breaks = year_breaks19_24,
+    labels = year_labels19_24
+  )+theme_minimal()+
+  geom_vline(xintercept = as.POSIXct("2021-06-28"), linetype = "dashed")+
+  annotate("text",as.POSIXct("2021-06-28"),y=1590,label="Onset of Heat Dome",color="black")
+D309plot_circ
+
+ggsave(here("Plots/Ecomatik_adjustments", "D309plot_raw.png"), plot = D309plot_raw)
+ggsave(here("Plots/Ecomatik_adjustments", "D309plot_circ.png"), plot = D309plot_circ)
 ```
 
 # 310
@@ -840,6 +929,9 @@ daily_bai_stats_6dendros <- bind_rows(
 daily_bai_stats_6dendros$ID <- as.factor(daily_bai_stats_6dendros$ID)
 daily_bai_stats_6dendros$AgeClass <- as.factor(daily_bai_stats_6dendros$AgeClass)
 
+save(daily_bai_stats_6dendros,file = here(
+  "Data/daily_bai_stats_6dendros.RData"))
+
 ggplot(daily_bai_stats_6dendros, aes(
   x=date,y=cumu_bai_mm2_norm,color=ID))+geom_line(size=1)+
   geom_vline(xintercept = as.POSIXct("2021-06-27"), linetype = "dashed",color="red")
@@ -1066,9 +1158,7 @@ for (i in 1:nrow(id_year_combos)) {
 ### Age classes averaged
 
 ```{r}
-#getting EMM for each period nested within year
-emm_CBM <- emmeans(model_cumu_bai_norm, ~ period | year | AgeClass)
-emm_TDB <- emmeans(model_total_daily_bai, ~ period | year | AgeClass)
+#getting EMM for eac
 emm_DMB <- emmeans(model_delta_max_bai, ~ period | year | AgeClass)
 
 #defining contrast to match period order
@@ -1132,4 +1222,132 @@ contrast_DMB_per_id <- daily_bai_stats_6dendros_truncated_BandA %>%
 print(contrast_CBM_per_id)
 print(contrast_TBM_per_id)
 print(contrast_DMB_per_id)
+```
+
+# Custom contrasts to compare after vs before averages of 2019-2020 vs 2022-2024
+
+```{r}
+library(emmeans)
+```
+
+```{r}
+#custom contrast vector positions are based on the order of appearance in the summary output below where our default reference levels are 2019, before, and 2nd growth
+summary(model_total_daily_bai)
+
+#vector position numbers and their summary counterparts
+# 1: (Intercept) = 2019, before, 2nd growth (reference combination)
+# 2: year2020 = difference: 2020 vs 2019, before, 2nd growth  
+# 3: year2021 
+# 4: year2022 
+# 5: year2023 
+# 6: year2024
+# 7: periodduring = difference: during vs before, 2019, 2nd growth
+# 8: periodafter  = difference: after vs before, 2019, 2nd growth
+# 9: AgeClassOG = difference: old growth vs 2nd growth
+# 10: year2020:periodduring = during 2020 beyond main effects
+# 11: year2021:periodduring 
+# 12: year2022:periodduring
+# 13: year2023:periodduring
+# 14: year2024:periodduring
+# 15: year2020:periodafter = after in 2020 beyond main effects
+# 16: year2021:periodafter
+# 17: year2022:periodafter
+# 18: year2023:periodafter
+# 19: year2024:periodafter  
+
+# The model predicts the expected value for each year-period combination.
+
+# Contrast vectors for "after vs before" in each year
+
+# 2019 after - before: only needs one coefficient assignemnt (after period) since everything else is already included in ther reference level 
+C_2019_after_vs_before = c(
+  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+# 2020 after only (position 8) +  after*2020 interaction (position 15)
+C_2020_after_vs_before = c(
+  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0)
+
+# 2021 after only (position 8) - after*2021 interaction (position 16)
+C_2021_after_vs_before = c(
+  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+
+# 2022: after only (position 8) + interaction (position 17)  
+C_2022_after_vs_before = c(
+  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0)
+
+# 2023: after only (position 8) + interaction (position 18)
+C_2023_after_vs_before = c(
+  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+
+# 2024: after only (position 8) + interaction (position 19)
+C_2024_after_vs_before = c(
+  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+
+
+# Pre-heatwave (2019-2020) vs Post-heatwave (2022-2024)
+C_2019_2020_A_v_B <- (
+  C_2019_after_vs_before + C_2020_after_vs_before)/2
+
+C_2019_2021_A_v_B <- (
+  C_2019_after_vs_before + C_2021_after_vs_before)/3
+
+C_2022_2024_A_v_B <- (
+  C_2022_after_vs_before + C_2024_after_vs_before)/3
+
+
+
+
+
+
+
+# Average(2019, 2020) = 
+# 0.5 × [position 8] + 0.5 × [position 8 + position 15]
+# Same as 1.0 × position 8 + 0.5 × position 15
+
+# Average(2022, 2023, 2024) = 
+# (1/3) × [position 8 + position 17] + 
+# (1/3) × [position 8 + position 18] + 
+# (1/3) × [position 8 + position 19]
+# Same as  1.0 × position 8 + (1/3) × position 17 + (1/3) × position 18 + (1/3) × position 19
+
+# Average(2019,2020) - Average(2022,2023,2024) = 
+# 1-1 X position 8 + 0.5 X position 15 - 1/3 X position 17 - 1/3 X position 18 - 1/3 X position 19 
+
+C_19A_20A_vs_22A_24A = c(
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0, -1/3, -1/3, -1/3)
+# the above sum is -0.5
+
+
+
+# Individual after-before comparisons by year compared to 2021 
+
+# 2019 vs 2021: 
+# (2019 after - 2019 before) - (2021 after - 2021 before)
+# = ((position 1 + position 8) -  (position 1)) 
+#   - ((position 3 + position 8 + position 16) - (position 3)
+# = position 8 - (position 8 + position 16)
+# = - position 16
+
+C_2019_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0)
+
+# 2020 vs 2021:
+C_2020_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0, 0)
+
+# 2022 vs 2021:
+C_2022_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0)
+
+# 2023 vs 2021:  
+C_2023_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0)
+
+# 2024 vs 2021:
+C_2024_vs_2021 = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1)
+
+
+
+# Interpretation
+print("INTERPRETATION:")
+print("C_pre_vs_post: Tests if average after-before difference in 2019-2020 differs from 2022-2024")
+print("C_XXXX_vs_2021: Tests if each year's after-before difference differs from 2021's")
+print("Positive result = first group has larger after-before difference")
+print("Negative result = second group has larger after-before difference")
 ```
